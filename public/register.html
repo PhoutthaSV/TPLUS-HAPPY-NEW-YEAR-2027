@@ -65,6 +65,7 @@ $('#staffId').addEventListener('input', () => {
   t = setTimeout(async () => {
     try {
       const r = await (await fetch('/api/lookup?id=' + encodeURIComponent(id))).json();
+      if (r.disabled) return; // online: staff lookup is turned off for privacy
       if (r.found) {
         $('#name').value = r.name; $('#department').value = r.department || '';
         $('#lookupMsg').textContent = '✅ ພົບຂໍ້ມູນພະນັກງານ'; $('#lookupMsg').className = 'text-xs mt-1 block text-green-700 font-semibold';

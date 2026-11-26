@@ -141,7 +141,12 @@ tailwind.config = {
         <div class="text-brand font-extrabold text-lg">⭐ ລາງວັນພິເສດ ສະເພາະຄົນທີ່ຢູ່ໃນງານ</div>
         <p class="text-sm opacity-80 mt-1">ໃຫ້ຜູ້ເຂົ້າຮ່ວມສະແກນ QR ແລ້ວປ້ອນຂໍ້ມູນ ລາຍຊື່ຈະເຂົ້າວົງລໍ້ພິເສດທັນທີ</p>
         <div class="mt-3 inline-block bg-white p-3 rounded-2xl"><div id="qrSmall"></div></div>
-        <select id="urlSelect" class="mt-3 w-full rounded-xl px-3 py-2 text-brand-900 font-semibold text-sm"></select>
+        <div id="netStatus" class="mt-3 text-sm font-bold"></div>
+        <select id="urlSelect" class="mt-2 w-full rounded-xl px-3 py-2 text-brand-900 font-semibold text-sm"></select>
+        <div class="mt-2 flex gap-2">
+          <input id="customUrl" placeholder="ຫຼື ວາງລິ້ງເອງ ເຊັ່ນ https://xxxx.ngrok-free.app" class="flex-1 min-w-0 rounded-xl px-3 py-2 text-brand-900 text-sm">
+          <button id="btnCustomUrl" class="rounded-xl bg-brand text-brand-900 font-bold px-3 text-sm">ໃຊ້</button>
+        </div>
         <div class="mt-3 grid grid-cols-2 gap-2">
           <button id="btnQrBig" class="rounded-xl bg-brand text-brand-900 font-extrabold py-2">🔳 ສະແດງ QR ເຕັມຈໍ</button>
           <a id="lnkRegister" target="_blank" class="rounded-xl border-2 border-brand text-brand font-bold py-2">🔗 ເປີດຟອມ</a>
@@ -209,7 +214,7 @@ let selectedPrizeId = localStorage.getItem('selectedPrize') || null;
 let muted = localStorage.getItem('muted') === '1';
 let rotation = 0, spinning = false, wheelPool = [], faceCanvas = null, needFace = true;
 let pendingWinner = null, autoTimer = null;
-let qrBase = localStorage.getItem('qrBase') || '';
+let qrBase = '';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -515,16 +520,46 @@ function renderQR() {
   $('#qrUrlText').textContent = url;
   $('#lnkRegister').href = url;
 }
+let customUrl = localStorage.getItem('customUrl') || '';
+let lastInfoKey = '';
 async function loadInfo() {
-  try {
-    const info = await api('/api/info');
-    const opts = [...new Set([...info.urls, location.origin])];
-    if (!qrBase || !opts.includes(qrBase)) qrBase = info.urls[0] || location.origin;
-    $('#urlSelect').innerHTML = opts.map(u => `<option ${u === qrBase ? 'selected' : ''} value="${u}">${u}/register</option>`).join('');
-  } catch { qrBase = location.origin; }
+  let info = { urls: [], publicUrl: null, tunnel: 'off' };
+  try { info = await api('/api/info'); } catch {}
+  const opts = [];
+  if (info.publicUrl) opts.push({ v: info.publicUrl, t: '🌐 Online (4G/5G/Wi-Fi ໃດກໍໄດ້) — ' + info.publicUrl });
+  if (customUrl && customUrl !== info.publicUrl) opts.push({ v: customUrl, t: '🔗 ລິ້ງທີ່ໃສ່ເອງ — ' + customUrl });
+  for (const u of [...new Set([...info.urls, location.origin])]) opts.push({ v: u, t: '📶 Wi-Fi ດຽວກັນ — ' + u });
+  const values = opts.map(o => o.v);
+  // Prefer: address picked by hand → online tunnel → custom link → first Wi-Fi address
+  const manual = localStorage.getItem('qrBase');
+  qrBase = values.includes(manual) ? manual : (info.publicUrl || customUrl || info.urls[0] || location.origin);
+  const key = JSON.stringify([values, qrBase, info.tunnel]);
+  if (key === lastInfoKey) return;
+  const newlyOnline = lastInfoKey && info.publicUrl && !lastInfoKey.includes(info.publicUrl);
+  lastInfoKey = key;
+  $('#urlSelect').innerHTML = opts.map(o => `<option ${o.v === qrBase ? 'selected' : ''} value="${esc(o.v)}">${esc(o.t)}/register</option>`).join('');
+  const st = {
+    online: '<span class="text-green-400">🌐 Online ພ້ອມແລ້ວ — ສະແກນໄດ້ທຸກເຄືອຂ່າຍ</span>',
+    starting: '<span class="text-brand">⏳ ກຳລັງເປີດລິ້ງ Online...</span>',
+    stopped: '<span class="text-red-400">⚠ ລິ້ງ Online ຂາດ — ກຳລັງເຊື່ອມຕໍ່ໃໝ່...</span>',
+    error: '<span class="text-red-400">⚠ ເປີດ Online ບໍ່ໄດ້ (ຍັງບໍ່ໄດ້ຕິດຕັ້ງ cloudflared) — ໃຊ້ໄດ້ສະເພາະ Wi-Fi ດຽວກັນ</span>',
+    manual: '<span class="text-green-400">🌐 ໃຊ້ລິ້ງ Online ທີ່ຕັ້ງໄວ້</span>',
+    off: '<span class="opacity-80">📶 ໂໝດ Wi-Fi — ໂທລະສັບຕ້ອງຢູ່ Wi-Fi ດຽວກັນ (ເປີດ start-online.bat ເພື່ອໃຊ້ Online)</span>',
+  };
+  $('#netStatus').innerHTML = st[info.tunnel] || st.off;
+  if (newlyOnline && qrBase === info.publicUrl) toast('🌐 ລິ້ງ Online ພ້ອມແລ້ວ — QR ອັບເດດແລ້ວ');
   renderQR();
 }
-$('#urlSelect').onchange = e => { qrBase = e.target.value; localStorage.setItem('qrBase', qrBase); renderQR(); };
+$('#urlSelect').onchange = e => { qrBase = e.target.value; localStorage.setItem('qrBase', qrBase); lastInfoKey = ''; loadInfo(); };
+$('#btnCustomUrl').onclick = () => {
+  let v = $('#customUrl').value.trim().replace(/\/register\/?$/, '').replace(/\/+$/, '');
+  if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
+  try { if (v) new URL(v); } catch { return toast('ລິ້ງບໍ່ຖືກຕ້ອງ', 'error'); }
+  customUrl = v; localStorage.setItem('customUrl', v);
+  if (v) { qrBase = v; localStorage.setItem('qrBase', v); }
+  $('#customUrl').value = ''; lastInfoKey = ''; loadInfo();
+  toast(v ? '✅ QR ໃຊ້ລິ້ງ ' + v : 'ລຶບລິ້ງທີ່ໃສ່ເອງແລ້ວ');
+};
 $('#btnQrBig').onclick = () => { renderQR(); $('#qrModal').classList.remove('hidden'); };
 $('#qrClose').onclick = () => $('#qrModal').classList.add('hidden');
 
@@ -849,6 +884,7 @@ setMuteIcon();
   refreshAll();
   loadInfo();
   setInterval(() => { if (!spinning) poll(); }, 3000);
+  setInterval(() => { if (!spinning) loadInfo(); }, 5000);
 })();
 </script>
 </body>

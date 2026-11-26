@@ -5,7 +5,11 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 
+const { spawn } = require('child_process');
+
 const PORT = Number(process.env.PORT) || 3000;
+const WANT_TUNNEL = process.argv.includes('--tunnel') || process.env.TUNNEL === '1';
+let publicUrl = process.env.PUBLIC_URL ? process.env.PUBLIC_URL.replace(/\/+$/, '') : null;
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'public');
 const DATA_DIR = path.join(ROOT, 'data');
@@ -136,14 +140,27 @@ function serveFile(res, file) {
 const clean = (v, n = 120) => String(v == null ? '' : v).trim().slice(0, n);
 const norm = s => clean(s).toLowerCase().replace(/\s+/g, ' ');
 
+// Requests that come through a tunnel (Cloudflare / ngrok) carry proxy headers.
+// Internet visitors may only use the check-in form; the wheel & admin APIs stay on this PC / Wi-Fi.
+function fromInternet(req) {
+  const h = req.headers;
+  return !!(h['cf-connecting-ip'] || h['cf-ray'] || h['x-forwarded-for'] || h['forwarded'] || h['ngrok-trace-id']);
+}
+const PUBLIC_PATHS = new Set(['/register', '/register.html', '/logo.png', '/favicon.ico', '/api/register', '/api/lookup']);
+
 // ---------- routes ----------
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const p = url.pathname;
+  const online = fromInternet(req);
+  if (online && !PUBLIC_PATHS.has(p)) {
+    if (p === '/' || p === '/index.html') { res.writeHead(302, { Location: '/register' }); return res.end(); }
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Forbidden');
+  }
   try {
     if (p === '/api/employees' && req.method === 'GET') return send(res, 200, getEmployees());
     if (p === '/api/state' && req.method === 'GET') return send(res, 200, state);
-    if (p === '/api/info' && req.method === 'GET') return send(res, 200, { port: PORT, urls: lanUrls() });
+    if (p === '/api/info' && req.method === 'GET') return send(res, 200, { port: PORT, urls: lanUrls(), publicUrl, tunnel: tunnelStatus });
 
     if (p === '/api/admin' && req.method === 'PUT') {
       const b = await readBody(req);
@@ -154,6 +171,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/lookup' && req.method === 'GET') {
+      // Don't let people on the internet read staff names by guessing IDs
+      if (online) return send(res, 200, { found: false, disabled: true });
       const id = norm(url.searchParams.get('id'));
       const emp = getEmployees();
       const e = (emp.employees || []).find(x => norm(x.staffId) === id);
@@ -199,9 +218,44 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// ---------- Cloudflare quick tunnel (online QR) ----------
+let tunnelStatus = WANT_TUNNEL ? 'starting' : (publicUrl ? 'manual' : 'off');
+function startTunnel() {
+  let proc;
+  try {
+    proc = spawn('cloudflared', ['tunnel', '--no-autoupdate', '--url', `http://localhost:${PORT}`], { windowsHide: true });
+  } catch (e) { return tunnelFail(e); }
+  proc.on('error', tunnelFail);
+  const onData = buf => {
+    const m = String(buf).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
+    if (m && publicUrl !== m[0]) {
+      publicUrl = m[0]; tunnelStatus = 'online';
+      console.log(`\n  🌐 ONLINE check-in form (any phone, 4G/5G): ${publicUrl}/register\n`);
+    }
+  };
+  proc.stdout.on('data', onData);
+  proc.stderr.on('data', onData);
+  proc.on('exit', code => {
+    if (tunnelStatus === 'error') return;
+    tunnelStatus = 'stopped'; publicUrl = null;
+    console.log(`  ⚠ Tunnel stopped (code ${code}). Restarting in 5s...`);
+    setTimeout(startTunnel, 5000);
+  });
+  const stop = () => { try { proc.kill(); } catch {} process.exit(); };
+  process.once('SIGINT', stop); process.once('SIGTERM', stop);
+}
+function tunnelFail(e) {
+  tunnelStatus = 'error';
+  console.log('\n  ⚠ Could not start cloudflared:', e.code === 'ENOENT' ? 'not installed' : (e.message || e));
+  console.log('    Install it once with:  winget install --id Cloudflare.cloudflared');
+  console.log('    then close this window and run start-online.bat again.\n');
+}
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log('\n  TPLUS Lucky Draw is running');
   console.log(`  Wheel (this computer): http://localhost:${PORT}`);
   for (const u of lanUrls()) console.log(`  Check-in form (phones on same Wi-Fi): ${u}/register`);
+  if (publicUrl) console.log(`  🌐 Online check-in form: ${publicUrl}/register`);
   console.log('');
+  if (WANT_TUNNEL) { console.log('  Starting online tunnel (cloudflared)...'); startTunnel(); }
 });
