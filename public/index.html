@@ -32,6 +32,15 @@ tailwind.config = {
   .shine { background: linear-gradient(90deg, #1A1400 0%, #1A1400 40%, #A87400 50%, #1A1400 60%, #1A1400 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 3s linear infinite; }
   @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(245,183,0,.6) } 50% { box-shadow: 0 0 0 14px rgba(245,183,0,0) } }
   .glow { animation: pulseGlow 1.8s ease-in-out infinite; }
+  /* Wheel-only fullscreen */
+  /* .stage-full = fallback when the browser refuses the Fullscreen API (fills the window instead) */
+  #stage:fullscreen, #stage.stage-full { border: 0; border-radius: 0; overflow: auto; display: flex; flex-direction: column;
+    background: radial-gradient(circle at 50% 55%, #FFFFFF 0%, #FFFBEA 45%, #FFE047 100%); }
+  #stage.stage-full { position: fixed; inset: 0; z-index: 30; }
+  #stage:fullscreen #stageBody, #stage.stage-full #stageBody { flex: 1; justify-content: center; padding-top: .5rem; padding-bottom: 1rem; }
+  #stage:fullscreen #wheelWrap, #stage.stage-full #wheelWrap { max-width: min(calc(100vh - 340px), 94vw); }
+  #stage:fullscreen #keyHint, #stage.stage-full #keyHint { display: none; }
+  #stage:fullscreen #pointerName, #stage.stage-full #pointerName { font-size: clamp(2rem, 4vh, 3.25rem); }
   .bg-dots { background-image: radial-gradient(#F5B70033 1.5px, transparent 1.5px); background-size: 22px 22px; }
 </style>
 </head>
@@ -58,11 +67,12 @@ tailwind.config = {
 <main class="max-w-[1800px] mx-auto p-4 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_460px] gap-4">
 
   <!-- Wheel stage -->
-  <section class="relative rounded-3xl bg-white shadow-xl border-4 border-brand overflow-hidden bg-dots">
+  <section id="stage" class="relative rounded-3xl bg-white shadow-xl border-4 border-brand overflow-hidden bg-dots">
+    <button id="btnStageFull" class="absolute bottom-3 right-3 z-10 rounded-full bg-brand-900 text-brand font-bold px-4 py-2 text-sm shadow-lg hover:scale-105 transition" title="ເຕັມຈໍສະເພາະວົງລໍ້ (F)">⛶ ເຕັມຈໍວົງລໍ້</button>
     <!-- current prize banner -->
     <div id="prizeBanner" class="flex items-center gap-4 p-4 border-b-4 border-brand bg-gradient-to-r from-brand-100 via-white to-brand-100"></div>
 
-    <div class="flex flex-col items-center px-4 pb-6 pt-4">
+    <div id="stageBody" class="flex flex-col items-center px-4 pb-6 pt-4">
       <div id="wheelWrap" class="relative w-full max-w-[min(78vh,760px)] aspect-square">
         <canvas id="wheel" class="w-full h-full block"></canvas>
       </div>
@@ -82,7 +92,7 @@ tailwind.config = {
         </label>
       </div>
       <p id="poolInfo" class="mt-3 text-sm font-semibold opacity-70"></p>
-      <p class="mt-1 text-xs opacity-50">ກົດ <kbd class="px-1.5 py-0.5 rounded bg-brand-100 border border-brand">Space</kbd> ເພື່ອໝູນ</p>
+      <p id="keyHint" class="mt-1 text-xs opacity-50">ກົດ <kbd class="px-1.5 py-0.5 rounded bg-brand-100 border border-brand">Space</kbd> ເພື່ອໝູນ · <kbd class="px-1.5 py-0.5 rounded bg-brand-100 border border-brand">F</kbd> ເຕັມຈໍວົງລໍ້</p>
     </div>
   </section>
 
@@ -640,6 +650,25 @@ function setMuteIcon() { $('#btnMute').textContent = muted ? '🔇' : '🔊'; }
 $('#btnMute').onclick = () => { muted = !muted; localStorage.setItem('muted', muted ? '1' : '0'); setMuteIcon(); };
 $('#btnFull').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
 
+// Wheel-only fullscreen. Popups (winner, QR, toasts, confetti) live inside the stage
+// so they still show while only the stage is fullscreen.
+const stage = $('#stage');
+['#winModal', '#qrModal', '#toasts', '#confetti'].forEach(s => stage.appendChild($(s)));
+function stageIsFull() { return document.fullscreenElement === stage || stage.classList.contains('stage-full'); }
+function syncStageBtn() { $('#btnStageFull').textContent = stageIsFull() ? '✕ ອອກຈາກເຕັມຈໍ (Esc)' : '⛶ ເຕັມຈໍວົງລໍ້'; }
+function exitStageFull() {
+  stage.classList.remove('stage-full');
+  if (document.fullscreenElement) document.exitFullscreen();
+  syncStageBtn();
+}
+function toggleStageFull() {
+  if (stageIsFull()) return exitStageFull();
+  const fallback = () => { stage.classList.add('stage-full'); syncStageBtn(); };
+  if (stage.requestFullscreen) stage.requestFullscreen().then(syncStageBtn, fallback); else fallback();
+}
+$('#btnStageFull').onclick = toggleStageFull;
+document.addEventListener('fullscreenchange', syncStageBtn);
+
 // ====================== wheel drawing ======================
 const canvas = $('#wheel'), ctx = canvas.getContext('2d');
 const logo = new Image(); logo.src = '/logo.png'; logo.onload = () => needFace = true;
@@ -847,7 +876,11 @@ document.addEventListener('keydown', e => {
     else if (!$('#qrModal').classList.contains('hidden')) return;
     else spin();
   }
-  if (e.code === 'Escape') $('#qrModal').classList.add('hidden');
+  if (e.code === 'Escape') {
+    if (!$('#qrModal').classList.contains('hidden')) $('#qrModal').classList.add('hidden');
+    else if (stage.classList.contains('stage-full')) exitStageFull();
+  }
+  if (e.code === 'KeyF' && !e.ctrlKey && !e.metaKey && !e.altKey) toggleStageFull();
 });
 canvas.addEventListener('click', e => {
   const r = canvas.getBoundingClientRect(), x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2;
