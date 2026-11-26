@@ -33,22 +33,13 @@ tailwind.config = {
   @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(245,183,0,.6) } 50% { box-shadow: 0 0 0 14px rgba(245,183,0,0) } }
   .glow { animation: pulseGlow 1.8s ease-in-out infinite; }
   /* Big QR screen — sizes follow the viewport so it always fits */
-  #qrLayout { flex-direction: row; }
-  .qr-logo { width: min(14vh, 9vw); height: min(14vh, 9vw); }
-  .qr-title { font-size: min(11vh, 6.2vw); margin-top: 3vh; }
-  .qr-sub { font-size: min(5.2vh, 2.9vw); margin-top: 2.5vh; }
-  .qr-count { font-size: min(4.4vh, 2.5vw); margin-top: 4vh; padding: 1vh 2.2vw; }
-  .qr-box { padding: 1.5rem; }
-  .qr-url { font-size: min(2.4vh, 1.4vw); margin-top: 1.5vh; max-width: 45vw; opacity: .75; }
+  .qr-logo { width: 8vh; height: 8vh; }
+  .qr-title { font-size: min(7.5vh, 8vw); margin-top: 1.5vh; }
+  .qr-sub { font-size: min(3.6vh, 4.6vw); margin-top: .8vh; }
+  .qr-box { padding: 1.5rem; margin-top: 2.5vh; }
+  .qr-url { font-size: min(1.8vh, 3vw); margin-top: 1vh; max-width: 90vw; opacity: .75; }
+  .qr-count { font-size: min(3.4vh, 4.4vw); margin-top: 1.5vh; padding: .6vh 2.5vh; }
   #qrBig img, #qrBig canvas { display: block; }
-  @media (orientation: portrait) {
-    #qrLayout { flex-direction: column; gap: 2.5vh; }
-    .qr-logo { width: 9vh; height: 9vh; }
-    .qr-title { font-size: min(6.5vh, 11vw); margin-top: 1.5vh; }
-    .qr-sub { font-size: min(3.2vh, 5.5vw); margin-top: 1vh; }
-    .qr-count { font-size: min(3vh, 5vw); margin-top: 1.5vh; padding: .8vh 5vw; }
-    .qr-url { font-size: min(1.8vh, 3.2vw); max-width: 90vw; }
-  }
   /* Wheel-only fullscreen */
   /* .stage-full = fallback when the browser refuses the Fullscreen API (fills the window instead) */
   #stage:fullscreen, #stage.stage-full { border: 0; border-radius: 0; overflow: auto; display: flex; flex-direction: column;
@@ -245,18 +236,14 @@ tailwind.config = {
 <!-- Big QR modal -->
 <div id="qrModal" class="hidden fixed inset-0 z-40 bg-brand grid place-items-center p-6">
   <button id="qrClose" class="absolute top-4 right-4 h-12 w-12 rounded-full bg-brand-900 text-brand text-2xl">✕</button>
-  <!-- Landscape (projector): text left, QR right. Portrait: stacked. Everything sized to fit one screen. -->
-  <div id="qrLayout" class="w-full h-full flex items-center justify-center gap-[4vw] text-center">
-    <div class="qr-text flex flex-col items-center">
-      <img src="/logo.png" class="qr-logo rounded-[1.5rem] shadow-lg" alt="">
-      <h2 class="qr-title font-black leading-tight">ສະແກນເພື່ອ<br>ລົງທະບຽນ</h2>
-      <p class="qr-sub font-bold leading-snug">ລຸ້ນຮັບລາງວັນພິເສດ<br>ສະເພາະຜູ້ທີ່ຢູ່ໃນງານ ⭐</p>
-      <p class="qr-count font-black rounded-full bg-brand-900 text-brand">ລົງທະບຽນແລ້ວ <span id="qrCount">0</span> ຄົນ</p>
-    </div>
-    <div class="flex flex-col items-center">
-      <div class="bg-white rounded-[2rem] shadow-2xl qr-box"><div id="qrBig"></div></div>
-      <p id="qrUrlText" class="qr-url font-bold break-all"></p>
-    </div>
+  <!-- Everything centred, top to bottom; sizes follow the screen height so it fits one screen -->
+  <div id="qrLayout" class="w-full h-full flex flex-col items-center justify-center text-center">
+    <img src="/logo.png" class="qr-logo rounded-[1.5rem] shadow-lg" alt="">
+    <h2 class="qr-title font-black leading-tight">ສະແກນເພື່ອລົງທະບຽນ</h2>
+    <p class="qr-sub font-bold leading-snug">ລຸ້ນຮັບລາງວັນພິເສດ ສະເພາະຜູ້ທີ່ຢູ່ໃນງານ ⭐</p>
+    <div class="qr-box bg-white rounded-[2rem] shadow-2xl"><div id="qrBig"></div></div>
+    <p id="qrUrlText" class="qr-url font-bold break-all"></p>
+    <p class="qr-count font-black rounded-full bg-brand-900 text-brand">ລົງທະບຽນແລ້ວ <span id="qrCount">0</span> ຄົນ</p>
   </div>
 </div>
 
