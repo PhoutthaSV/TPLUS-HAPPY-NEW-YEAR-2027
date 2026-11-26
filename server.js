@@ -146,7 +146,27 @@ function fromInternet(req) {
   const h = req.headers;
   return !!(h['cf-connecting-ip'] || h['cf-ray'] || h['x-forwarded-for'] || h['forwarded'] || h['ngrok-trace-id']);
 }
-const PUBLIC_PATHS = new Set(['/register', '/register.html', '/logo.png', '/favicon.ico', '/api/register', '/api/lookup']);
+const PUBLIC_PATHS = new Set(['/register', '/register.html', '/logo.png', '/favicon.ico', '/api/register']);
+
+// Staff ID matching ignores upper/lower case and spaces ("vip23-1115 " == "VIP23-1115")
+const idKey = s => String(s == null ? '' : s).toUpperCase().replace(/\s+/g, '').slice(0, 40);
+let xlsxCache = { version: '', employees: [] };
+function staffList() {
+  const emp = getEmployees();
+  return emp.format === 'xlsx' ? xlsxCache.employees : (emp.employees || []);
+}
+
+// Simple brute-force guard: max 10 unknown IDs per device/IP per 5 minutes
+const failures = new Map();
+function clientIp(req) {
+  return String(req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+}
+function tooManyFailures(ip) {
+  const now = Date.now(), list = (failures.get(ip) || []).filter(t => now - t < 5 * 60 * 1000);
+  failures.set(ip, list);
+  return list.length >= 10;
+}
+function noteFailure(ip) { (failures.get(ip) || failures.set(ip, []).get(ip)).push(Date.now()); }
 
 // ---------- routes ----------
 const server = http.createServer(async (req, res) => {
@@ -170,26 +190,30 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true, version: state.version });
     }
 
-    if (p === '/api/lookup' && req.method === 'GET') {
-      // Don't let people on the internet read staff names by guessing IDs
-      if (online) return send(res, 200, { found: false, disabled: true });
-      const id = norm(url.searchParams.get('id'));
-      const emp = getEmployees();
-      const e = (emp.employees || []).find(x => norm(x.staffId) === id);
-      return send(res, 200, e ? { found: true, name: e.name, department: e.department, location: e.location } : { found: false });
+    // The wheel page parses List.xlsx in the browser and hands the result here,
+    // so check-in can validate Staff IDs when the list is an Excel file.
+    if (p === '/api/employees/cache' && req.method === 'POST') {
+      const b = await readBody(req);
+      if (Array.isArray(b.employees)) xlsxCache = { version: String(b.version || ''), employees: b.employees };
+      return send(res, 200, { ok: true });
     }
 
     if (p === '/api/register' && req.method === 'POST') {
-      const b = await readBody(req, 64 * 1024);
-      const a = { staffId: clean(b.staffId, 40).toUpperCase(), name: clean(b.name), department: clean(b.department), phone: clean(b.phone, 30) };
-      if (!a.name) return send(res, 400, { ok: false, error: 'ກະລຸນາປ້ອນຊື່ ແລະ ນາມສະກຸນ' });
-      const dup = state.attendees.find(x => (a.staffId && norm(x.staffId) === norm(a.staffId)) || norm(x.name) === norm(a.name));
-      if (dup) return send(res, 200, { ok: true, already: true, attendee: dup });
-      a.id = crypto.randomUUID();
-      a.time = new Date().toISOString();
+      const ip = clientIp(req);
+      if (tooManyFailures(ip)) return send(res, 429, { ok: false, error: 'ລອງຜິດຫຼາຍເທື່ອເກີນໄປ ກະລຸນາລໍຖ້າ 5 ນາທີ' });
+      const b = await readBody(req, 16 * 1024);
+      const id = idKey(b.staffId);
+      if (!id) return send(res, 400, { ok: false, error: 'ກະລຸນາປ້ອນລະຫັດພະນັກງານ' });
+      const list = staffList();
+      if (!list.length) return send(res, 503, { ok: false, error: 'ລາຍຊື່ພະນັກງານຍັງບໍ່ພ້ອມ ກະລຸນາແຈ້ງຜູ້ຈັດງານ' });
+      const emp = list.find(e => idKey(e.staffId) === id);
+      if (!emp) { noteFailure(ip); return send(res, 404, { ok: false, code: 'not_found', error: 'ບໍ່ພົບລະຫັດພະນັກງານນີ້ ກະລຸນາກວດຄືນ' }); }
+      const dup = state.attendees.find(x => idKey(x.staffId) === id);
+      if (dup) return send(res, 409, { ok: false, code: 'duplicate', error: 'ລະຫັດນີ້ລົງທະບຽນແລ້ວ', attendee: { staffId: dup.staffId, name: dup.name, time: dup.time } });
+      const a = { id: crypto.randomUUID(), staffId: emp.staffId, name: emp.name, department: emp.department || '', location: emp.location || '', time: new Date().toISOString() };
       state.attendees.push(a);
       saveState();
-      return send(res, 200, { ok: true, attendee: a, count: state.attendees.length });
+      return send(res, 200, { ok: true, attendee: { staffId: a.staffId, name: a.name, department: a.department, time: a.time }, count: state.attendees.length });
     }
 
     if (p === '/api/attendees/remove' && req.method === 'POST') {

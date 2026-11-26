@@ -272,6 +272,7 @@ async function pollEmployees(first) {
   $('#syncBadge').textContent = '🟢 Live';
   if (d.version === empVersion) return;
   const list = d.format === 'xlsx' ? await readXlsx(d) : d.employees;
+  if (d.format === 'xlsx') api('/api/employees/cache', { method: 'POST', body: JSON.stringify({ version: d.version, employees: list }) }).catch(() => {});
   const before = employees.length;
   employees = list; empVersion = d.version; empSource = d;
   if (!first) toast(`🔄 ອັບເດດລາຍຊື່ຈາກ ${d.file} ແລ້ວ: ${employees.length} ຄົນ (${employees.length - before >= 0 ? '+' : ''}${employees.length - before})`);

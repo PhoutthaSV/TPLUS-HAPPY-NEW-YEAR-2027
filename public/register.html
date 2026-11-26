@@ -11,6 +11,8 @@
   body { font-family: 'Poppins', 'Noto Sans Lao', sans-serif; }
   @keyframes pop { 0% { transform: scale(.6); opacity: 0 } 70% { transform: scale(1.05); opacity: 1 } 100% { transform: scale(1) } }
   .pop { animation: pop .45s cubic-bezier(.2,.9,.3,1.3) both; }
+  @keyframes shake { 0%,100% { transform: translateX(0) } 20%,60% { transform: translateX(-8px) } 40%,80% { transform: translateX(8px) } }
+  .shake { animation: shake .4s ease; }
 </style>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-[#FFD60A] via-[#FFF4C2] to-white text-[#1A1400]">
@@ -23,80 +25,75 @@
 
     <form id="form" class="mt-6 bg-white rounded-3xl shadow-xl border-4 border-[#FFD60A] p-5 space-y-4">
       <label class="block">
-        <span class="text-sm font-bold">ລະຫັດພະນັກງານ (Staff ID)</span>
-        <input id="staffId" autocomplete="off" autocapitalize="characters" placeholder="ເຊັ່ນ: VIP23-1115" class="mt-1 w-full rounded-xl border-2 border-[#FFD60A] px-4 py-3 text-lg uppercase focus:outline-none focus:ring-4 focus:ring-yellow-200">
-        <span id="lookupMsg" class="text-xs mt-1 block min-h-[1rem]"></span>
+        <span class="text-base font-bold">ລະຫັດພະນັກງານ (Staff ID)</span>
+        <input id="staffId" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ເຊັ່ນ: VIP23-1115"
+          class="mt-2 w-full rounded-2xl border-2 border-[#FFD60A] px-4 py-4 text-2xl font-bold tracking-wider text-center uppercase focus:outline-none focus:ring-4 focus:ring-yellow-200">
       </label>
-      <label class="block">
-        <span class="text-sm font-bold">ຊື່ ແລະ ນາມສະກຸນ <span class="text-red-600">*</span></span>
-        <input id="name" required placeholder="ຊື່ ແລະ ນາມສະກຸນ" class="mt-1 w-full rounded-xl border-2 border-[#FFD60A] px-4 py-3 text-lg focus:outline-none focus:ring-4 focus:ring-yellow-200">
-      </label>
-      <label class="block">
-        <span class="text-sm font-bold">ພະແນກ</span>
-        <input id="department" placeholder="ພະແນກ" class="mt-1 w-full rounded-xl border-2 border-[#FFD60A] px-4 py-3 text-lg focus:outline-none focus:ring-4 focus:ring-yellow-200">
-      </label>
-      <label class="block">
-        <span class="text-sm font-bold">ເບີໂທ</span>
-        <input id="phone" type="tel" inputmode="tel" placeholder="020 xxxx xxxx" class="mt-1 w-full rounded-xl border-2 border-[#FFD60A] px-4 py-3 text-lg focus:outline-none focus:ring-4 focus:ring-yellow-200">
-      </label>
-      <p id="err" class="hidden text-red-600 font-semibold text-sm"></p>
+      <div id="msg" class="hidden rounded-2xl px-4 py-3 text-sm font-semibold"></div>
       <button id="submit" class="w-full rounded-2xl bg-[#1A1400] text-[#FFD60A] text-xl font-extrabold py-4 active:scale-95 transition disabled:opacity-50">ລົງທະບຽນ ✔</button>
+      <p class="text-xs text-center opacity-60">ລະບົບຈະກວດລະຫັດກັບລາຍຊື່ພະນັກງານ · 1 ລະຫັດ ລົງທະບຽນໄດ້ 1 ເທື່ອ</p>
     </form>
 
     <div id="done" class="hidden pop mt-6 bg-white rounded-3xl shadow-xl border-4 border-[#FFD60A] p-6 text-center">
       <div class="text-6xl">🎉</div>
-      <h2 id="doneTitle" class="mt-3 text-2xl font-extrabold">ລົງທະບຽນສຳເລັດ!</h2>
-      <p id="doneName" class="mt-2 text-xl font-bold"></p>
-      <p class="mt-3 text-sm opacity-70">ລາຍຊື່ຂອງທ່ານຢູ່ໃນວົງລໍ້ລາງວັນພິເສດແລ້ວ<br>ຂໍໃຫ້ໂຊກດີ! 🍀</p>
+      <h2 class="mt-3 text-2xl font-extrabold">ລົງທະບຽນສຳເລັດ!</h2>
+      <p id="doneName" class="mt-3 text-2xl font-extrabold"></p>
+      <p id="doneMeta" class="mt-1 text-sm font-semibold opacity-70"></p>
+      <p class="mt-4 text-sm opacity-70">ລາຍຊື່ຂອງທ່ານຢູ່ໃນວົງລໍ້ລາງວັນພິເສດແລ້ວ<br>ຂໍໃຫ້ໂຊກດີ! 🍀</p>
+      <button id="again" class="mt-5 text-sm font-bold underline opacity-70">ລົງທະບຽນໃຫ້ຄົນອື່ນ</button>
     </div>
   </div>
 
 <script>
 const $ = s => document.querySelector(s);
 const saved = JSON.parse(localStorage.getItem('registered') || 'null');
-if (saved) showDone(saved, true);
+if (saved && saved.staffId) showDone(saved);
 
-let t = null;
-$('#staffId').addEventListener('input', () => {
-  clearTimeout(t);
-  const id = $('#staffId').value.trim();
-  $('#lookupMsg').textContent = '';
-  if (id.length < 4) return;
-  t = setTimeout(async () => {
-    try {
-      const r = await (await fetch('/api/lookup?id=' + encodeURIComponent(id))).json();
-      if (r.disabled) return; // online: staff lookup is turned off for privacy
-      if (r.found) {
-        $('#name').value = r.name; $('#department').value = r.department || '';
-        $('#lookupMsg').textContent = '✅ ພົບຂໍ້ມູນພະນັກງານ'; $('#lookupMsg').className = 'text-xs mt-1 block text-green-700 font-semibold';
-      } else {
-        $('#lookupMsg').textContent = 'ບໍ່ພົບລະຫັດນີ້ — ກະລຸນາປ້ອນຊື່ເອງ'; $('#lookupMsg').className = 'text-xs mt-1 block opacity-60';
-      }
-    } catch {}
-  }, 350);
-});
+function showMsg(text, kind) {
+  const m = $('#msg');
+  m.textContent = text;
+  m.className = 'rounded-2xl px-4 py-3 text-sm font-semibold ' + (kind === 'error' ? 'bg-red-50 text-red-700 border-2 border-red-300' : 'bg-yellow-50 text-[#1A1400] border-2 border-[#FFD60A]');
+  if (kind === 'error') { $('#form').classList.remove('shake'); void $('#form').offsetWidth; $('#form').classList.add('shake'); }
+}
+
+$('#staffId').addEventListener('input', () => $('#msg').classList.add('hidden'));
 
 $('#form').addEventListener('submit', async e => {
   e.preventDefault();
-  const body = { staffId: $('#staffId').value, name: $('#name').value, department: $('#department').value, phone: $('#phone').value };
-  $('#submit').disabled = true; $('#err').classList.add('hidden');
+  const staffId = $('#staffId').value.trim();
+  if (!staffId) return;
+  $('#submit').disabled = true; $('#submit').textContent = 'ກຳລັງກວດສອບ...';
   try {
-    const r = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const r = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ staffId }) });
     const d = await r.json();
-    if (!d.ok) throw new Error(d.error || 'ລົງທະບຽນບໍ່ສຳເລັດ');
-    localStorage.setItem('registered', JSON.stringify(d.attendee));
-    showDone(d.attendee, d.already);
-  } catch (err) {
-    $('#err').textContent = err.message || 'ເຊື່ອມຕໍ່ບໍ່ໄດ້ ກະລຸນາລອງໃໝ່'; $('#err').classList.remove('hidden');
-  } finally { $('#submit').disabled = false; }
+    if (d.ok) {
+      localStorage.setItem('registered', JSON.stringify(d.attendee));
+      showDone(d.attendee);
+    } else if (d.code === 'duplicate') {
+      const t = d.attendee?.time ? new Date(d.attendee.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      showMsg(`⚠ ລະຫັດ ${d.attendee?.staffId || staffId.toUpperCase()} (${d.attendee?.name || ''}) ລົງທະບຽນແລ້ວ${t ? ' ເວລາ ' + t : ''} — ບໍ່ສາມາດລົງທະບຽນຊ້ຳໄດ້`, 'error');
+    } else {
+      showMsg('❌ ' + (d.error || 'ລົງທະບຽນບໍ່ສຳເລັດ'), 'error');
+    }
+  } catch {
+    showMsg('❌ ເຊື່ອມຕໍ່ບໍ່ໄດ້ ກະລຸນາລອງໃໝ່', 'error');
+  } finally {
+    $('#submit').disabled = false; $('#submit').textContent = 'ລົງທະບຽນ ✔';
+  }
 });
 
-function showDone(a, already) {
+function showDone(a) {
   $('#form').classList.add('hidden');
   $('#done').classList.remove('hidden');
-  $('#doneTitle').textContent = already ? 'ທ່ານລົງທະບຽນແລ້ວ ✔' : 'ລົງທະບຽນສຳເລັດ!';
-  $('#doneName').textContent = a.name + (a.staffId ? ' (' + a.staffId + ')' : '');
+  $('#doneName').textContent = a.name;
+  $('#doneMeta').textContent = [a.staffId, a.department].filter(Boolean).join(' · ');
 }
+$('#again').onclick = () => {
+  localStorage.removeItem('registered');
+  $('#done').classList.add('hidden');
+  $('#form').classList.remove('hidden');
+  $('#staffId').value = ''; $('#msg').classList.add('hidden'); $('#staffId').focus();
+};
 </script>
 </body>
 </html>
