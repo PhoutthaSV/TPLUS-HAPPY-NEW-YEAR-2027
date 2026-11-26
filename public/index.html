@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TPLUS Lucky Draw · Happy New Year 2027</title>
+<link rel="icon" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Poppins', 'Noto Sans Lao', 'sans-serif'] },
+      colors: { brand: { DEFAULT: '#FFD60A', 50: '#FFFBEA', 100: '#FFF4C2', 200: '#FFEA85', 300: '#FFE047', 400: '#FFD60A', 500: '#F5B700', 600: '#D99A00', 700: '#A87400', 900: '#1A1400' } },
+    }
+  }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  body { font-family: 'Poppins', 'Noto Sans Lao', sans-serif; }
+  .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: #F5B700; border-radius: 8px; }
+  .scroll-thin::-webkit-scrollbar-track { background: #FFF4C2; border-radius: 8px; }
+  .tab-btn[aria-selected="true"] { background: #1A1400; color: #FFD60A; }
+  @keyframes pop { 0% { transform: scale(.6); opacity: 0 } 70% { transform: scale(1.05); opacity: 1 } 100% { transform: scale(1) } }
+  .pop { animation: pop .45s cubic-bezier(.2,.9,.3,1.3) both; }
+  @keyframes shine { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
+  .shine { background: linear-gradient(90deg, #1A1400 0%, #1A1400 40%, #A87400 50%, #1A1400 60%, #1A1400 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 3s linear infinite; }
+  @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(245,183,0,.6) } 50% { box-shadow: 0 0 0 14px rgba(245,183,0,0) } }
+  .glow { animation: pulseGlow 1.8s ease-in-out infinite; }
+  .bg-dots { background-image: radial-gradient(#F5B70033 1.5px, transparent 1.5px); background-size: 22px 22px; }
+</style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-brand-50 via-white to-brand-100 text-brand-900">
+
+<!-- Header -->
+<header class="bg-brand shadow-md">
+  <div class="max-w-[1800px] mx-auto px-4 py-3 flex items-center gap-4">
+    <img src="/logo.png" alt="TPLUS" class="h-12 w-12 rounded-xl shadow">
+    <div class="flex-1 min-w-0">
+      <h1 class="text-xl md:text-2xl font-extrabold leading-tight">TPLUS Happy New Year 2027</h1>
+      <p class="text-sm font-semibold opacity-80">Lucky Draw · ງານກິນລ້ຽງປີໃໝ່ ຈັບສະຫຼາກຊິງລາງວັນ</p>
+    </div>
+    <div class="hidden md:flex items-center gap-2 text-sm font-semibold">
+      <span class="bg-white/70 rounded-full px-3 py-1">👥 ພະນັກງານ <b id="hdrEmp">0</b></span>
+      <span class="bg-white/70 rounded-full px-3 py-1">📲 ລົງທະບຽນ <b id="hdrAtt">0</b></span>
+      <span id="syncBadge" class="bg-white/70 rounded-full px-3 py-1" title="ກວດໄຟລ໌ລາຍຊື່ທຸກ 3 ວິນາທີ">🟢 Live</span>
+    </div>
+    <button id="btnMute" class="h-10 w-10 rounded-full bg-brand-900 text-brand text-lg" title="ປິດ/ເປີດສຽງ">🔊</button>
+    <button id="btnFull" class="h-10 w-10 rounded-full bg-brand-900 text-brand text-lg" title="ເຕັມຈໍ">⛶</button>
+  </div>
+</header>
+
+<main class="max-w-[1800px] mx-auto p-4 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_460px] gap-4">
+
+  <!-- Wheel stage -->
+  <section class="relative rounded-3xl bg-white shadow-xl border-4 border-brand overflow-hidden bg-dots">
+    <!-- current prize banner -->
+    <div id="prizeBanner" class="flex items-center gap-4 p-4 border-b-4 border-brand bg-gradient-to-r from-brand-100 via-white to-brand-100"></div>
+
+    <div class="flex flex-col items-center px-4 pb-6 pt-4">
+      <div id="wheelWrap" class="relative w-full max-w-[min(78vh,760px)] aspect-square">
+        <canvas id="wheel" class="w-full h-full block"></canvas>
+      </div>
+
+      <div class="mt-4 text-center min-h-[3.5rem]">
+        <div class="text-xs font-semibold uppercase tracking-widest opacity-60">ລູກສອນຊີ້ທີ່</div>
+        <div id="pointerName" class="text-2xl md:text-3xl font-extrabold">—</div>
+      </div>
+
+      <div class="mt-3 flex flex-wrap items-center justify-center gap-4">
+        <button id="btnSpin" class="glow px-12 py-4 rounded-full bg-brand-900 text-brand text-2xl font-black tracking-wide shadow-lg hover:scale-105 active:scale-95 transition disabled:opacity-40 disabled:hover:scale-100 disabled:animate-none">
+          ໝູນ 🎯
+        </button>
+        <label class="flex items-center gap-2 font-semibold cursor-pointer select-none bg-brand-50 border-2 border-brand rounded-full px-4 py-2">
+          <input id="chkAuto" type="checkbox" class="w-5 h-5 accent-yellow-500">
+          ໝູນຕໍ່ອັດຕະໂນມັດຈົນຄົບ
+        </label>
+      </div>
+      <p id="poolInfo" class="mt-3 text-sm font-semibold opacity-70"></p>
+      <p class="mt-1 text-xs opacity-50">ກົດ <kbd class="px-1.5 py-0.5 rounded bg-brand-100 border border-brand">Space</kbd> ເພື່ອໝູນ</p>
+    </div>
+  </section>
+
+  <!-- Side panel -->
+  <aside class="rounded-3xl bg-white shadow-xl border-4 border-brand flex flex-col xl:max-h-[calc(100vh-120px)] min-h-[600px]">
+    <nav class="grid grid-cols-4 gap-1 p-2 bg-brand-100 rounded-t-[20px] text-sm font-bold" role="tablist">
+      <button class="tab-btn rounded-xl py-2" data-tab="prizes" aria-selected="true">🎁 ລາງວັນ</button>
+      <button class="tab-btn rounded-xl py-2" data-tab="results" aria-selected="false">🏆 ຜົນ <span id="resCount" class="text-xs"></span></button>
+      <button class="tab-btn rounded-xl py-2" data-tab="special" aria-selected="false">⭐ ພິເສດ</button>
+      <button class="tab-btn rounded-xl py-2" data-tab="staff" aria-selected="false">👥 ລາຍຊື່</button>
+    </nav>
+
+    <!-- Prizes -->
+    <div data-panel="prizes" class="flex-1 overflow-auto scroll-thin p-4 space-y-4">
+      <form id="prizeForm" class="rounded-2xl border-2 border-dashed border-brand-500 bg-brand-50 p-4 space-y-3">
+        <div id="pFormTitle" class="font-extrabold text-lg">➕ ເພີ່ມລາງວັນ</div>
+        <input id="pName" required placeholder="ຊື່ລາງວັນ ເຊັ່ນ: ທອງຄຳ 1 ສະຫຼຶງ" class="w-full rounded-xl border-2 border-brand px-3 py-2 focus:outline-none focus:ring-4 focus:ring-brand-200">
+        <div class="grid grid-cols-2 gap-3">
+          <label class="text-sm font-semibold">ຈຳນວນລາງວັນ
+            <input id="pQty" type="number" min="1" value="1" required class="mt-1 w-full rounded-xl border-2 border-brand px-3 py-2 focus:outline-none focus:ring-4 focus:ring-brand-200">
+          </label>
+          <label class="text-sm font-semibold">ປະເພດ
+            <select id="pType" class="mt-1 w-full rounded-xl border-2 border-brand px-3 py-2 bg-white focus:outline-none focus:ring-4 focus:ring-brand-200">
+              <option value="normal">ທົ່ວໄປ (ພະນັກງານທັງໝົດ)</option>
+              <option value="special">⭐ ພິເສດ (ສະເພາະຄົນຢູ່ໃນງານ)</option>
+            </select>
+          </label>
+        </div>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <div id="pPreview" class="h-16 w-16 rounded-xl border-2 border-brand bg-white grid place-items-center text-2xl overflow-hidden shrink-0">🖼️</div>
+          <span class="text-sm font-semibold">ໃສ່ຮູບລາງວັນ (ບໍ່ບັງຄັບ)<br><span class="text-xs opacity-60 font-normal">ກົດເພື່ອເລືອກຮູບ</span></span>
+          <input id="pImage" type="file" accept="image/*" class="hidden">
+        </label>
+        <button type="button" id="pRemoveImg" class="hidden text-sm font-bold text-red-600 hover:underline">✕ ລຶບຮູບອອກ</button>
+        <div class="flex gap-2">
+          <button id="pSubmit" class="flex-1 rounded-xl bg-brand-900 text-brand font-extrabold py-2.5 hover:opacity-90">ບັນທຶກລາງວັນ</button>
+          <button type="button" id="pCancel" class="hidden rounded-xl border-2 border-brand-900 font-bold px-4 py-2.5">ຍົກເລີກ</button>
+        </div>
+      </form>
+      <div id="prizeList" class="space-y-3"></div>
+    </div>
+
+    <!-- Results -->
+    <div data-panel="results" class="hidden flex-1 overflow-auto scroll-thin p-4 space-y-4">
+      <div class="flex flex-wrap gap-2">
+        <button id="btnExport" class="rounded-xl bg-brand-900 text-brand font-bold px-4 py-2">⬇️ ສົ່ງອອກ CSV (Excel)</button>
+        <button id="btnUndo" class="rounded-xl border-2 border-brand-900 font-bold px-4 py-2">↩️ ຍົກເລີກຄົນລ່າສຸດ</button>
+        <button id="btnResetResults" class="rounded-xl border-2 border-red-500 text-red-600 font-bold px-4 py-2">🗑️ ລ້າງຜົນທັງໝົດ</button>
+      </div>
+      <div id="resultList" class="space-y-4"></div>
+    </div>
+
+    <!-- Special / QR -->
+    <div data-panel="special" class="hidden flex-1 overflow-auto scroll-thin p-4 space-y-4">
+      <div class="rounded-2xl bg-brand-900 text-white p-4 text-center">
+        <div class="text-brand font-extrabold text-lg">⭐ ລາງວັນພິເສດ ສະເພາະຄົນທີ່ຢູ່ໃນງານ</div>
+        <p class="text-sm opacity-80 mt-1">ໃຫ້ຜູ້ເຂົ້າຮ່ວມສະແກນ QR ແລ້ວປ້ອນຂໍ້ມູນ ລາຍຊື່ຈະເຂົ້າວົງລໍ້ພິເສດທັນທີ</p>
+        <div class="mt-3 inline-block bg-white p-3 rounded-2xl"><div id="qrSmall"></div></div>
+        <select id="urlSelect" class="mt-3 w-full rounded-xl px-3 py-2 text-brand-900 font-semibold text-sm"></select>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <button id="btnQrBig" class="rounded-xl bg-brand text-brand-900 font-extrabold py-2">🔳 ສະແດງ QR ເຕັມຈໍ</button>
+          <a id="lnkRegister" target="_blank" class="rounded-xl border-2 border-brand text-brand font-bold py-2">🔗 ເປີດຟອມ</a>
+        </div>
+      </div>
+      <div class="flex items-center justify-between">
+        <div class="font-extrabold text-lg">ຜູ້ລົງທະບຽນ <span id="attCount" class="text-brand-700"></span></div>
+        <button id="btnClearAtt" class="text-sm rounded-xl border-2 border-red-500 text-red-600 font-bold px-3 py-1">ລ້າງທັງໝົດ</button>
+      </div>
+      <input id="attSearch" placeholder="🔍 ຄົ້ນຫາ..." class="w-full rounded-xl border-2 border-brand px-3 py-2">
+      <div id="attList" class="divide-y divide-brand-100 rounded-2xl border-2 border-brand-100"></div>
+    </div>
+
+    <!-- Staff list -->
+    <div data-panel="staff" class="hidden flex-1 overflow-auto scroll-thin p-4 space-y-3">
+      <div id="srcInfo" class="rounded-2xl bg-brand-50 border-2 border-brand p-3 text-sm"></div>
+      <input id="empSearch" placeholder="🔍 ຄົ້ນຫາຊື່ / ລະຫັດ / ພະແນກ / ສາຂາ" class="w-full rounded-xl border-2 border-brand px-3 py-2">
+      <div id="empList" class="divide-y divide-brand-100 rounded-2xl border-2 border-brand-100 text-sm"></div>
+    </div>
+  </aside>
+</main>
+
+<!-- Winner modal -->
+<div id="winModal" class="hidden fixed inset-0 z-40 bg-brand-900/70 backdrop-blur-sm grid place-items-center p-4">
+  <div class="pop relative w-full max-w-2xl rounded-[2rem] bg-white border-8 border-brand shadow-2xl text-center overflow-hidden">
+    <div class="bg-brand py-4">
+      <div class="text-lg font-bold">🎉 ຂໍສະແດງຄວາມຍິນດີ 🎉</div>
+      <div id="wPrize" class="text-2xl md:text-3xl font-black"></div>
+    </div>
+    <div class="p-6 md:p-8">
+      <img id="wImg" class="hidden mx-auto h-36 w-36 object-contain rounded-2xl border-4 border-brand-100 mb-4" alt="">
+      <div id="wName" class="shine text-4xl md:text-6xl font-black leading-tight break-words"></div>
+      <div id="wMeta" class="mt-3 text-lg font-semibold opacity-70"></div>
+      <div id="wProgress" class="mt-4 inline-block rounded-full bg-brand-100 px-4 py-1 font-bold"></div>
+      <div class="mt-6 flex flex-wrap justify-center gap-3">
+        <button id="wOk" class="rounded-full bg-brand-900 text-brand px-8 py-3 text-lg font-extrabold">✔ ຕົກລົງ</button>
+        <button id="wAbsent" class="rounded-full border-2 border-brand-900 px-6 py-3 font-bold">🚫 ບໍ່ຢູ່ – ຈັບໃໝ່</button>
+      </div>
+      <div id="wAutoNote" class="mt-3 text-sm opacity-60"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Big QR modal -->
+<div id="qrModal" class="hidden fixed inset-0 z-40 bg-brand grid place-items-center p-6">
+  <button id="qrClose" class="absolute top-4 right-4 h-12 w-12 rounded-full bg-brand-900 text-brand text-2xl">✕</button>
+  <div class="text-center">
+    <img src="/logo.png" class="h-20 w-20 mx-auto rounded-2xl shadow-lg" alt="">
+    <h2 class="mt-4 text-4xl md:text-5xl font-black">ສະແກນເພື່ອລົງທະບຽນເຂົ້າຮ່ວມງານ</h2>
+    <p class="mt-2 text-xl font-semibold">ລຸ້ນຮັບລາງວັນພິເສດ ສະເພາະຜູ້ທີ່ຢູ່ໃນງານ ⭐</p>
+    <div class="mt-6 inline-block bg-white p-6 rounded-[2rem] shadow-2xl"><div id="qrBig"></div></div>
+    <p id="qrUrlText" class="mt-4 text-lg font-bold"></p>
+    <p class="mt-2 text-3xl font-black">ລົງທະບຽນແລ້ວ <span id="qrCount">0</span> ຄົນ</p>
+  </div>
+</div>
+
+<div id="toasts" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 space-y-2 w-[min(92vw,420px)]"></div>
+<canvas id="confetti" class="pointer-events-none fixed inset-0 z-50 w-full h-full"></canvas>
+
+<script>
+// ====================== state ======================
+let employees = [], attendees = [], prizes = [], results = [];
+let empVersion = null, empSource = null, lastSync = null;
+let selectedPrizeId = localStorage.getItem('selectedPrize') || null;
+let muted = localStorage.getItem('muted') === '1';
+let rotation = 0, spinning = false, wheelPool = [], faceCanvas = null, needFace = true;
+let pendingWinner = null, autoTimer = null;
+let qrBase = localStorage.getItem('qrBase') || '';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const keyOf = p => (p.staffId ? 'ID:' + String(p.staffId).trim().toUpperCase() : 'N:' + String(p.name).trim().toLowerCase().replace(/\s+/g, ' '));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+const randInt = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; };
+const prizeById = id => prizes.find(p => p.id === id);
+const drawnCount = id => results.filter(r => r.prizeId === id && r.status !== 'absent').length;
+const typeLabel = t => t === 'special' ? '⭐ ພິເສດ' : 'ທົ່ວໄປ';
+
+function toast(msg, kind = 'info') {
+  const el = document.createElement('div');
+  el.className = 'pop rounded-2xl px-4 py-3 shadow-xl font-semibold border-2 ' + (kind === 'error' ? 'bg-red-50 border-red-400 text-red-700' : 'bg-brand-900 border-brand text-brand');
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = 0; setTimeout(() => el.remove(), 400); }, 3200);
+}
+
+// ====================== server sync ======================
+async function api(path, opts = {}) {
+  const r = await fetch(path, { cache: 'no-store', headers: { 'Content-Type': 'application/json' }, ...opts });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+  return r.json();
+}
+let saveChain = Promise.resolve();
+function saveAdmin() {
+  const body = JSON.stringify({ prizes, results });
+  saveChain = saveChain.then(() => api('/api/admin', { method: 'PUT', body })).catch(e => toast('ບັນທຶກບໍ່ສຳເລັດ: ' + e.message, 'error'));
+}
+
+let sheetJsLoading = null;
+function loadSheetJS() {
+  if (window.XLSX) return Promise.resolve();
+  return sheetJsLoading ||= new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+    s.onload = res; s.onerror = rej; document.head.appendChild(s);
+  });
+}
+async function readXlsx(src) {
+  await loadSheetJS();
+  const buf = await (await fetch('/List.xlsx?v=' + src.mtime, { cache: 'no-store' })).arrayBuffer();
+  const wb = XLSX.read(buf);
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+  const head = (rows[0] || []).map(h => String(h).trim().toLowerCase());
+  const col = (...n) => head.findIndex(h => n.some(x => h.includes(x)));
+  const iId = col('staff id', 'id'), iSex = col('sex', 'gender'), iName = col('name'), iDept = col('department', 'dept'), iLoc = col('location', 'branch');
+  return rows.slice(1).map(r => ({ staffId: String(r[iId] ?? '').trim(), sex: String(r[iSex] ?? '').trim(), name: String(r[iName] ?? '').trim(), department: String(r[iDept] ?? '').trim(), location: String(r[iLoc] ?? '').trim() })).filter(e => e.name);
+}
+
+async function pollEmployees(first) {
+  const d = await api('/api/employees');
+  lastSync = new Date();
+  if (d.error && !d.employees?.length && d.format !== 'xlsx') { $('#syncBadge').textContent = '🔴 ' + d.error; return; }
+  $('#syncBadge').textContent = '🟢 Live';
+  if (d.version === empVersion) return;
+  const list = d.format === 'xlsx' ? await readXlsx(d) : d.employees;
+  const before = employees.length;
+  employees = list; empVersion = d.version; empSource = d;
+  if (!first) toast(`🔄 ອັບເດດລາຍຊື່ຈາກ ${d.file} ແລ້ວ: ${employees.length} ຄົນ (${employees.length - before >= 0 ? '+' : ''}${employees.length - before})`);
+  refreshAll();
+}
+async function pollState(first) {
+  const s = await api('/api/state');
+  if (first) { prizes = s.prizes; results = s.results; }
+  const changed = JSON.stringify(s.attendees) !== JSON.stringify(attendees);
+  const grew = s.attendees.length > attendees.length;
+  attendees = s.attendees;
+  if (changed) {
+    if (!first && grew) toast(`📲 ລົງທະບຽນໃໝ່: ${attendees[attendees.length - 1].name} (ລວມ ${attendees.length} ຄົນ)`);
+    refreshAll();
+  }
+}
+async function poll(first = false) {
+  try { await Promise.all([pollEmployees(first), pollState(first)]); }
+  catch (e) { $('#syncBadge').textContent = '🔴 Offline'; }
+}
+
+// ====================== pools ======================
+function takenKeys() { return new Set(results.map(r => r.key)); }
+function currentPrize() { return prizeById(selectedPrizeId); }
+function computePool() {
+  const p = currentPrize();
+  const taken = takenKeys();
+  const base = p && p.type === 'special' ? attendees : employees;
+  return base.filter(x => !taken.has(keyOf(x)));
+}
+function refreshAll() {
+  if (!spinning && !pendingWinner) { wheelPool = computePool(); needFace = true; }
+  $('#hdrEmp').textContent = employees.length;
+  $('#hdrAtt').textContent = attendees.length;
+  $('#qrCount').textContent = attendees.length;
+  renderBanner(); renderPrizes(); renderResults(); renderAttendees(); renderEmployees(); updateSpinButton();
+}
+
+// ====================== prizes UI ======================
+function renderBanner() {
+  const p = currentPrize();
+  const el = $('#prizeBanner');
+  if (!p) { el.innerHTML = `<div class="text-xl font-bold opacity-70 py-4 w-full text-center">👉 ກະລຸນາເລືອກລາງວັນທີ່ຈະຈັບກ່ອນ (ແຖບ 🎁 ລາງວັນ)</div>`; return; }
+  const done = drawnCount(p.id);
+  el.innerHTML = `
+    <div class="h-20 w-20 md:h-24 md:w-24 rounded-2xl bg-white border-4 border-brand grid place-items-center overflow-hidden shrink-0 text-4xl">${p.image ? `<img src="${p.image}" class="h-full w-full object-contain">` : '🎁'}</div>
+    <div class="flex-1 min-w-0">
+      <div class="text-sm font-bold opacity-60">ກຳລັງຈັບລາງວັນ · <span class="${p.type === 'special' ? 'text-brand-700' : ''}">${typeLabel(p.type)}</span></div>
+      <div class="text-2xl md:text-4xl font-black truncate">${esc(p.name)}</div>
+    </div>
+    <div class="text-center shrink-0">
+      <div class="text-4xl md:text-5xl font-black">${done}<span class="text-2xl opacity-50">/${p.qty}</span></div>
+      <div class="text-sm font-bold ${done >= p.qty ? 'text-green-700' : 'opacity-60'}">${done >= p.qty ? '✅ ຄົບແລ້ວ' : 'ຍັງເຫຼືອ ' + (p.qty - done)}</div>
+    </div>`;
+}
+function renderPrizes() {
+  const el = $('#prizeList');
+  if (!prizes.length) { el.innerHTML = `<p class="text-center opacity-60 py-6">ຍັງບໍ່ມີລາງວັນ — ເພີ່ມຢູ່ຂ້າງເທິງ</p>`; return; }
+  el.innerHTML = prizes.map(p => {
+    const done = drawnCount(p.id), sel = p.id === selectedPrizeId, full = done >= p.qty;
+    return `
+    <div class="rounded-2xl border-4 ${sel ? 'border-brand-900 bg-brand-100' : 'border-brand-100 bg-white'} p-3 flex gap-3 items-center">
+      <div class="h-16 w-16 rounded-xl bg-white border-2 border-brand grid place-items-center overflow-hidden shrink-0 text-3xl">${p.image ? `<img src="${p.image}" class="h-full w-full object-contain">` : '🎁'}</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-extrabold truncate">${esc(p.name)}</div>
+        <div class="text-xs font-semibold mt-0.5"><span class="rounded-full px-2 py-0.5 ${p.type === 'special' ? 'bg-brand-900 text-brand' : 'bg-brand-100'}">${typeLabel(p.type)}</span></div>
+        <div class="mt-1 flex items-center gap-1 text-sm">
+          <button data-act="dec" data-id="${p.id}" class="h-6 w-6 rounded-md bg-brand-100 font-bold" title="ຫຼຸດຈຳນວນ">−</button>
+          <span class="font-bold ${full ? 'text-green-700' : ''}">${done}/${p.qty}</span>
+          <button data-act="inc" data-id="${p.id}" class="h-6 w-6 rounded-md bg-brand-100 font-bold" title="ເພີ່ມຈຳນວນ">+</button>
+          ${full ? '<span class="text-green-700 font-bold ml-1">✅ ຄົບ</span>' : ''}
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <button data-act="select" data-id="${p.id}" class="rounded-lg px-3 py-1.5 text-sm font-bold ${sel ? 'bg-brand-900 text-brand' : 'bg-brand'}">${sel ? '✔ ເລືອກແລ້ວ' : 'ເລືອກ'}</button>
+        <div class="flex gap-1">
+          <button data-act="edit" data-id="${p.id}" class="flex-1 whitespace-nowrap rounded-lg px-2 py-1 text-sm font-bold hover:bg-brand-100" title="ແກ້ໄຂລາງວັນ">✏️ ແກ້ໄຂ</button>
+          <button data-act="del" data-id="${p.id}" class="flex-1 rounded-lg px-2 py-1 text-sm font-bold text-red-600 hover:bg-red-50">ລຶບ</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+$('#prizeList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  if (spinning || pendingWinner) return toast('ລໍຖ້າວົງລໍ້ຢຸດກ່ອນ', 'error');
+  const p = prizeById(b.dataset.id); if (!p) return;
+  const act = b.dataset.act;
+  if (act === 'select') selectPrize(p.id);
+  if (act === 'edit') return startEdit(p);
+  if (act === 'inc') { p.qty++; saveAdmin(); }
+  if (act === 'dec') { if (p.qty - 1 < Math.max(1, drawnCount(p.id))) return toast('ຈຳນວນຕ້ອງບໍ່ໜ້ອຍກວ່າທີ່ຈັບແລ້ວ', 'error'); p.qty--; saveAdmin(); }
+  if (act === 'del') {
+    const n = drawnCount(p.id);
+    if (!confirm(`ລຶບລາງວັນ "${p.name}" ?` + (n ? `\n(ມີຜູ້ໄດ້ຮັບແລ້ວ ${n} ຄົນ — ຜົນຈະຍັງເກັບໄວ້)` : ''))) return;
+    prizes = prizes.filter(x => x.id !== p.id);
+    if (selectedPrizeId === p.id) selectPrize(null);
+    saveAdmin();
+  }
+  refreshAll();
+});
+function selectPrize(id) {
+  selectedPrizeId = id;
+  id ? localStorage.setItem('selectedPrize', id) : localStorage.removeItem('selectedPrize');
+  refreshAll();
+}
+
+let pendingImage = null, editingId = null;
+function showPreview() {
+  $('#pPreview').innerHTML = pendingImage ? `<img src="${pendingImage}" class="h-full w-full object-contain">` : '🖼️';
+  $('#pRemoveImg').classList.toggle('hidden', !pendingImage);
+}
+$('#pImage').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  pendingImage = await resizeImage(f, 480);
+  e.target.value = '';
+  showPreview();
+});
+$('#pRemoveImg').onclick = () => { pendingImage = null; showPreview(); };
+function startEdit(p) {
+  editingId = p.id;
+  $('#pName').value = p.name;
+  $('#pQty').value = p.qty;
+  $('#pQty').min = Math.max(1, drawnCount(p.id));
+  $('#pType').value = p.type;
+  pendingImage = p.image || null; showPreview();
+  $('#pFormTitle').textContent = '✏️ ແກ້ໄຂລາງວັນ';
+  $('#pSubmit').textContent = 'ບັນທຶກການແກ້ໄຂ';
+  $('#pCancel').classList.remove('hidden');
+  $('#prizeForm').classList.replace('bg-brand-50', 'bg-brand-100');
+  $('#prizeForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('#pName').focus();
+}
+function resetPrizeForm() {
+  editingId = null; pendingImage = null;
+  $('#prizeForm').reset(); $('#pQty').min = 1; showPreview();
+  $('#pFormTitle').textContent = '➕ ເພີ່ມລາງວັນ';
+  $('#pSubmit').textContent = 'ບັນທຶກລາງວັນ';
+  $('#pCancel').classList.add('hidden');
+  $('#prizeForm').classList.replace('bg-brand-100', 'bg-brand-50');
+}
+$('#pCancel').onclick = resetPrizeForm;
+function resizeImage(file, max) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/png').length < 400000 ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = rej;
+    img.src = URL.createObjectURL(file);
+  });
+}
+$('#prizeForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('#pName').value.trim(), qty = Math.max(1, parseInt($('#pQty').value) || 1);
+  if (!name) return;
+  if (editingId) {
+    if (spinning || pendingWinner) return toast('ລໍຖ້າວົງລໍ້ຢຸດກ່ອນ', 'error');
+    const p = prizeById(editingId);
+    if (!p) { resetPrizeForm(); return; }
+    const done = drawnCount(p.id);
+    if (qty < done) return toast(`ຈຳນວນຕ້ອງບໍ່ໜ້ອຍກວ່າທີ່ຈັບແລ້ວ (${done})`, 'error');
+    Object.assign(p, { name, qty, type: $('#pType').value, image: pendingImage });
+    results.forEach(r => { if (r.prizeId === p.id) r.prizeName = name; });
+    saveAdmin(); resetPrizeForm(); refreshAll();
+    return toast('✅ ແກ້ໄຂລາງວັນ "' + name + '" ແລ້ວ');
+  }
+  const p = { id: uid(), name, qty, type: $('#pType').value, image: pendingImage };
+  prizes.push(p); saveAdmin();
+  resetPrizeForm();
+  if (!currentPrize()) selectPrize(p.id); else refreshAll();
+  toast('✅ ເພີ່ມລາງວັນ "' + name + '" ແລ້ວ');
+});
+
+// ====================== results UI ======================
+function renderResults() {
+  const won = results.filter(r => r.status !== 'absent');
+  $('#resCount').textContent = won.length ? `(${won.length})` : '';
+  const el = $('#resultList');
+  if (!results.length) { el.innerHTML = `<p class="text-center opacity-60 py-6">ຍັງບໍ່ມີຜູ້ໂຊກດີ</p>`; return; }
+  const order = [...prizes.map(p => p.id), ...new Set(results.map(r => r.prizeId))];
+  const seen = new Set();
+  el.innerHTML = order.filter(id => !seen.has(id) && seen.add(id) && results.some(r => r.prizeId === id)).map(id => {
+    const rs = results.filter(r => r.prizeId === id);
+    const p = prizeById(id);
+    let n = 0;
+    return `
+    <div class="rounded-2xl border-2 border-brand overflow-hidden">
+      <div class="bg-brand px-3 py-2 font-extrabold flex justify-between"><span>🎁 ${esc(p?.name || rs[0].prizeName)}</span><span>${rs.filter(r => r.status !== 'absent').length}${p ? '/' + p.qty : ''}</span></div>
+      ${rs.map(r => `
+        <div class="px-3 py-2 flex items-center gap-2 border-t border-brand-100 ${r.status === 'absent' ? 'opacity-40 line-through' : ''}">
+          <span class="w-7 text-center font-bold text-brand-700">${r.status === 'absent' ? '🚫' : ++n}</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold truncate">${esc(r.name)}</div>
+            <div class="text-xs opacity-60 truncate">${esc([r.staffId, r.department, r.location].filter(Boolean).join(' · '))}</div>
+          </div>
+          <button data-rid="${r.id}" class="text-xs rounded-lg px-2 py-1 border border-brand-500 no-underline" title="ເອົາຄືນເຂົ້າວົງລໍ້">↩️ ຄືນ</button>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+$('#resultList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-rid]'); if (!b || spinning || pendingWinner) return;
+  const r = results.find(x => x.id === b.dataset.rid);
+  if (!r || !confirm(`ເອົາ "${r.name}" ອອກຈາກຜົນ ແລະ ກັບເຂົ້າວົງລໍ້?`)) return;
+  results = results.filter(x => x.id !== r.id); saveAdmin(); refreshAll();
+});
+$('#btnUndo').onclick = () => {
+  if (spinning || pendingWinner || !results.length) return;
+  const r = results[results.length - 1];
+  if (!confirm(`ຍົກເລີກ "${r.name}" (${r.prizeName}) ?`)) return;
+  results.pop(); saveAdmin(); refreshAll();
+};
+$('#btnResetResults').onclick = () => {
+  if (spinning || pendingWinner || !results.length) return;
+  if (!confirm('ລ້າງຜົນການຈັບທັງໝົດ? ທຸກຄົນຈະກັບເຂົ້າວົງລໍ້')) return;
+  if (!confirm('ຢືນຢັນອີກຄັ້ງ: ລ້າງຜົນທັງໝົດ (ກູ້ຄືນບໍ່ໄດ້)')) return;
+  results = []; saveAdmin(); refreshAll();
+};
+$('#btnExport').onclick = () => {
+  const head = ['No.', 'Prize', 'Prize Type', 'Staff ID', 'Name & Surname', 'Department', 'Location', 'Status', 'Time'];
+  let n = 0;
+  const rows = results.map(r => [r.status === 'absent' ? '' : ++n, r.prizeName, r.round === 'special' ? 'Special' : 'Normal', r.staffId, r.name, r.department, r.location, r.status === 'absent' ? 'Absent' : 'Won', new Date(r.time).toLocaleString()]);
+  const csv = '﻿' + [head, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `LuckyDraw_Results_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.csv`;
+  a.click();
+};
+
+// ====================== attendees / QR ======================
+function registerUrl() { return (qrBase || location.origin) + '/register'; }
+let qrSmallObj = null, qrBigObj = null;
+function renderQR() {
+  const url = registerUrl();
+  $('#qrSmall').innerHTML = ''; $('#qrBig').innerHTML = '';
+  if (window.QRCode) {
+    qrSmallObj = new QRCode($('#qrSmall'), { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+    const big = Math.min(innerHeight * 0.5, innerWidth * 0.8, 520);
+    qrBigObj = new QRCode($('#qrBig'), { text: url, width: big, height: big, correctLevel: QRCode.CorrectLevel.M });
+  } else $('#qrSmall').textContent = 'QR library ໂຫຼດບໍ່ໄດ້ (ຕ້ອງມີອິນເຕີເນັດ)';
+  $('#qrUrlText').textContent = url;
+  $('#lnkRegister').href = url;
+}
+async function loadInfo() {
+  try {
+    const info = await api('/api/info');
+    const opts = [...new Set([...info.urls, location.origin])];
+    if (!qrBase || !opts.includes(qrBase)) qrBase = info.urls[0] || location.origin;
+    $('#urlSelect').innerHTML = opts.map(u => `<option ${u === qrBase ? 'selected' : ''} value="${u}">${u}/register</option>`).join('');
+  } catch { qrBase = location.origin; }
+  renderQR();
+}
+$('#urlSelect').onchange = e => { qrBase = e.target.value; localStorage.setItem('qrBase', qrBase); renderQR(); };
+$('#btnQrBig').onclick = () => { renderQR(); $('#qrModal').classList.remove('hidden'); };
+$('#qrClose').onclick = () => $('#qrModal').classList.add('hidden');
+
+function renderAttendees() {
+  const taken = takenKeys();
+  const q = $('#attSearch').value.trim().toLowerCase();
+  $('#attCount').textContent = `(${attendees.length})`;
+  const list = attendees.filter(a => !q || [a.name, a.staffId, a.department].join(' ').toLowerCase().includes(q));
+  $('#attList').innerHTML = list.length ? list.slice().reverse().map(a => `
+    <div class="px-3 py-2 flex items-center gap-2">
+      <div class="flex-1 min-w-0">
+        <div class="font-bold truncate">${taken.has(keyOf(a)) ? '🏆 ' : ''}${esc(a.name)}</div>
+        <div class="text-xs opacity-60 truncate">${esc([a.staffId, a.department, a.phone].filter(Boolean).join(' · '))} · ${new Date(a.time).toLocaleTimeString()}</div>
+      </div>
+      <button data-aid="${a.id}" class="text-xs text-red-600 font-bold px-2 py-1 rounded hover:bg-red-50">ລຶບ</button>
+    </div>`).join('') : `<p class="text-center opacity-60 py-6">ຍັງບໍ່ມີຜູ້ລົງທະບຽນ</p>`;
+}
+$('#attSearch').oninput = renderAttendees;
+$('#attList').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-aid]'); if (!b) return;
+  const a = attendees.find(x => x.id === b.dataset.aid);
+  if (!a || !confirm(`ລຶບ "${a.name}" ອອກຈາກລາຍຊື່ລົງທະບຽນ?`)) return;
+  await api('/api/attendees/remove', { method: 'POST', body: JSON.stringify({ id: a.id }) });
+  poll();
+});
+$('#btnClearAtt').onclick = async () => {
+  if (!attendees.length || !confirm('ລ້າງລາຍຊື່ຜູ້ລົງທະບຽນທັງໝົດ?')) return;
+  await api('/api/attendees/clear', { method: 'POST', body: '{}' });
+  poll();
+};
+
+// ====================== employees UI ======================
+function renderEmployees() {
+  const s = empSource;
+  $('#srcInfo').innerHTML = s ? `📄 ໄຟລ໌: <b>${esc(s.file)}</b> · <b>${employees.length}</b> ຄົນ<br>ແກ້ໄຂລ່າສຸດ: ${new Date(s.mtime).toLocaleString()}<br><span class="opacity-60">ແກ້ໄຂໄຟລ໌ແລ້ວກົດ Save — ວົງລໍ້ຈະອັບເດດເອງພາຍໃນ 3 ວິນາທີ</span>` : 'ກຳລັງໂຫຼດ...';
+  const taken = takenKeys();
+  const q = $('#empSearch').value.trim().toLowerCase();
+  const list = employees.filter(e => !q || [e.name, e.staffId, e.department, e.location].join(' ').toLowerCase().includes(q));
+  $('#empList').innerHTML = list.slice(0, 400).map(e => `
+    <div class="px-3 py-1.5 flex gap-2 ${taken.has(keyOf(e)) ? 'bg-brand-100' : ''}">
+      <span class="w-24 shrink-0 font-mono text-xs opacity-60 pt-0.5">${esc(e.staffId)}</span>
+      <span class="flex-1 min-w-0 truncate font-semibold">${taken.has(keyOf(e)) ? '🏆 ' : ''}${esc(e.name)}</span>
+      <span class="text-xs opacity-60 truncate max-w-[40%]">${esc(e.department)} · ${esc(e.location)}</span>
+    </div>`).join('') + (list.length > 400 ? `<p class="text-center text-xs opacity-60 py-2">... ແລະ ອີກ ${list.length - 400} ຄົນ</p>` : '');
+}
+$('#empSearch').oninput = renderEmployees;
+
+// ====================== tabs ======================
+document.querySelectorAll('.tab-btn').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tab-btn').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.querySelectorAll('[data-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== b.dataset.tab));
+});
+
+// ====================== audio ======================
+let actx = null;
+function audio() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); return actx; }
+let lastTick = 0;
+function tick() {
+  if (muted) return;
+  const now = performance.now(); if (now - lastTick < 35) return; lastTick = now;
+  const a = audio(), o = a.createOscillator(), g = a.createGain();
+  o.type = 'square'; o.frequency.value = 1100;
+  g.gain.setValueAtTime(0.06, a.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 0.04);
+  o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + 0.05);
+}
+function fanfare() {
+  if (muted) return;
+  const a = audio();
+  [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5].forEach((f, i) => {
+    const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + i * 0.13;
+    o.type = 'triangle'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + (i === 5 ? 0.9 : 0.25));
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + 1);
+  });
+}
+function setMuteIcon() { $('#btnMute').textContent = muted ? '🔇' : '🔊'; }
+$('#btnMute').onclick = () => { muted = !muted; localStorage.setItem('muted', muted ? '1' : '0'); setMuteIcon(); };
+$('#btnFull').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+
+// ====================== wheel drawing ======================
+const canvas = $('#wheel'), ctx = canvas.getContext('2d');
+const logo = new Image(); logo.src = '/logo.png'; logo.onload = () => needFace = true;
+const PALETTE = ['#FFD60A', '#FFFFFF', '#F5B700', '#FFF4C2', '#FFE047', '#FFFBEA'];
+let size = 0, dpr = 1;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  size = canvas.clientWidth;
+  canvas.width = size * dpr; canvas.height = size * dpr;
+  needFace = true;
+}
+new ResizeObserver(resize).observe(canvas);
+
+function buildFace(r) {
+  const c = document.createElement('canvas');
+  c.width = c.height = Math.ceil(r * 2 * dpr);
+  const g = c.getContext('2d');
+  g.scale(dpr, dpr); g.translate(r, r);
+  const n = wheelPool.length;
+  if (!n) {
+    g.fillStyle = '#FFFBEA'; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#A87400'; g.font = `700 ${r * 0.08}px Poppins, "Noto Sans Lao"`; g.textAlign = 'center';
+    g.fillText(currentPrize() ? 'ບໍ່ມີລາຍຊື່ໃນວົງລໍ້' : 'ເລືອກລາງວັນກ່ອນ', 0, r * 0.45);
+    return c;
+  }
+  const seg = Math.PI * 2 / n;
+  const pal = n % PALETTE.length === 1 ? PALETTE.slice(0, 5) : PALETTE;
+  for (let i = 0; i < n; i++) {
+    g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, r, i * seg, (i + 1) * seg); g.closePath();
+    g.fillStyle = n === 1 ? PALETTE[0] : pal[i % pal.length]; g.fill();
+    if (n <= 400) { g.strokeStyle = 'rgba(168,116,0,.35)'; g.lineWidth = n > 120 ? 0.5 : 1.2; g.stroke(); }
+  }
+  const fs = Math.min(r * 0.06, r * seg * 0.62);
+  if (fs >= 5.5) {
+    g.fillStyle = '#1A1400'; g.textAlign = 'right'; g.textBaseline = 'middle';
+    g.font = `${n > 60 ? 600 : 700} ${fs}px Poppins, "Noto Sans Lao"`;
+    const maxW = r * 0.74;
+    for (let i = 0; i < n; i++) {
+      g.save(); g.rotate((i + 0.5) * seg);
+      let t = wheelPool[i].name;
+      if (g.measureText(t).width > maxW) { while (t.length > 2 && g.measureText(t + '…').width > maxW) t = t.slice(0, -1); t += '…'; }
+      g.fillText(t, r * 0.95, 0);
+      g.restore();
+    }
+  }
+  return c;
+}
+
+function drawFrame(time) {
+  if (!size) return;
+  const R = size / 2, rFace = R * 0.88;
+  if (needFace) { faceCanvas = buildFace(rFace); needFace = false; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+  ctx.translate(R, R);
+
+  // outer ring
+  const ring = ctx.createRadialGradient(0, 0, rFace, 0, 0, R);
+  ring.addColorStop(0, '#A87400'); ring.addColorStop(0.35, '#FFD60A'); ring.addColorStop(0.7, '#F5B700'); ring.addColorStop(1, '#A87400');
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.985, 0, Math.PI * 2); ctx.fillStyle = ring; ctx.fill();
+  ctx.lineWidth = R * 0.012; ctx.strokeStyle = '#1A1400'; ctx.stroke();
+
+  // bulbs
+  const bulbs = 28, phase = Math.floor(time / (spinning ? 90 : 450));
+  for (let i = 0; i < bulbs; i++) {
+    const a = i / bulbs * Math.PI * 2, x = Math.cos(a) * R * 0.94, y = Math.sin(a) * R * 0.94;
+    const on = (i + phase) % 2 === 0;
+    ctx.beginPath(); ctx.arc(x, y, R * 0.022, 0, Math.PI * 2);
+    ctx.fillStyle = on ? '#FFFFFF' : '#FFE047';
+    ctx.shadowColor = on ? '#FFFFFF' : 'transparent'; ctx.shadowBlur = on ? R * 0.04 : 0;
+    ctx.fill(); ctx.shadowBlur = 0;
+  }
+
+  // face
+  ctx.save(); ctx.rotate(rotation);
+  ctx.drawImage(faceCanvas, -rFace, -rFace, rFace * 2, rFace * 2);
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(0, 0, rFace, 0, Math.PI * 2); ctx.lineWidth = R * 0.01; ctx.strokeStyle = '#1A1400'; ctx.stroke();
+
+  // hub
+  const hr = R * 0.15;
+  ctx.beginPath(); ctx.arc(0, 0, hr, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFFFFF'; ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = R * 0.04; ctx.fill(); ctx.shadowBlur = 0;
+  ctx.lineWidth = R * 0.022; ctx.strokeStyle = '#FFD60A'; ctx.stroke();
+  if (logo.complete && logo.naturalWidth) {
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, hr * 0.78, 0, Math.PI * 2); ctx.clip();
+    ctx.drawImage(logo, -hr * 0.78, -hr * 0.78, hr * 1.56, hr * 1.56); ctx.restore();
+  }
+
+  // pointer (top)
+  ctx.save(); ctx.translate(0, -R * 0.9);
+  ctx.beginPath(); ctx.moveTo(-R * 0.065, -R * 0.07); ctx.lineTo(R * 0.065, -R * 0.07); ctx.lineTo(0, R * 0.1); ctx.closePath();
+  ctx.fillStyle = '#1A1400'; ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = R * 0.03; ctx.fill(); ctx.shadowBlur = 0;
+  ctx.lineWidth = R * 0.012; ctx.strokeStyle = '#FFD60A'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, -R * 0.03, R * 0.022, 0, Math.PI * 2); ctx.fillStyle = '#FFD60A'; ctx.fill();
+  ctx.restore();
+}
+
+function indexAtPointer() {
+  const n = wheelPool.length; if (!n) return -1;
+  const seg = Math.PI * 2 / n;
+  let a = (-Math.PI / 2 - rotation) % (Math.PI * 2); if (a < 0) a += Math.PI * 2;
+  return Math.floor(a / seg) % n;
+}
+let lastIdx = -1;
+function loop(t) {
+  drawFrame(t);
+  const i = indexAtPointer();
+  if (i !== lastIdx) {
+    lastIdx = i;
+    $('#pointerName').textContent = i >= 0 ? wheelPool[i].name : '—';
+    if (spinning) tick();
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ====================== spin ======================
+const SPIN_MS = 5000;
+const easeOut = t => 1 - Math.pow(1 - t, 4);
+
+function updateSpinButton() {
+  const p = currentPrize();
+  const btn = $('#btnSpin');
+  let reason = '';
+  if (!p) reason = 'ເລືອກລາງວັນກ່ອນ';
+  else if (drawnCount(p.id) >= p.qty) reason = 'ລາງວັນນີ້ຄົບແລ້ວ';
+  else if (!wheelPool.length) reason = p.type === 'special' ? 'ຍັງບໍ່ມີຜູ້ລົງທະບຽນ' : 'ບໍ່ມີລາຍຊື່';
+  btn.disabled = spinning || !!pendingWinner || !!reason;
+  btn.textContent = spinning ? 'ກຳລັງໝູນ...' : reason || 'ໝູນ 🎯';
+  $('#poolInfo').textContent = p ? `ຜູ້ມີສິດລຸ້ນໃນວົງລໍ້: ${wheelPool.length} ຄົນ (${p.type === 'special' ? 'ຜູ້ລົງທະບຽນໃນງານ' : 'ພະນັກງານທັງໝົດ'} · ຄົນທີ່ໄດ້ລາງວັນແລ້ວຖືກຕັດອອກ)` : '';
+}
+
+function spin() {
+  const p = currentPrize();
+  if (spinning || pendingWinner || !p || drawnCount(p.id) >= p.qty) return;
+  wheelPool = computePool(); needFace = true;
+  if (!wheelPool.length) return updateSpinButton();
+  audio();
+  spinning = true; updateSpinButton();
+  const n = wheelPool.length, seg = Math.PI * 2 / n;
+  const w = randInt(n);
+  const target = w * seg + seg * (0.15 + Math.random() * 0.7);
+  const start = rotation;
+  let delta = (-Math.PI / 2 - target - start) % (Math.PI * 2); if (delta < 0) delta += Math.PI * 2;
+  delta += Math.PI * 2 * (7 + randInt(3));
+  const t0 = performance.now();
+  (function step(now) {
+    const t = Math.min(1, (now - t0) / SPIN_MS);
+    rotation = start + delta * easeOut(t);
+    if (t < 1) requestAnimationFrame(step);
+    else { rotation %= Math.PI * 2; spinning = false; onWin(wheelPool[w], p); }
+  })(t0);
+}
+
+function onWin(person, prize) {
+  const r = { id: uid(), key: keyOf(person), prizeId: prize.id, prizeName: prize.name, round: prize.type, staffId: person.staffId || '', name: person.name, department: person.department || '', location: person.location || '', time: new Date().toISOString(), status: 'won' };
+  results.push(r); saveAdmin();
+  pendingWinner = r;
+  const done = drawnCount(prize.id);
+  $('#wPrize').textContent = prize.name;
+  $('#wName').textContent = person.name;
+  $('#wMeta').textContent = [person.staffId, person.department, person.location].filter(Boolean).join(' · ');
+  $('#wProgress').textContent = `ຜູ້ໂຊກດີຄົນທີ ${done} / ${prize.qty}`;
+  const img = $('#wImg');
+  if (prize.image) { img.src = prize.image; img.classList.remove('hidden'); } else img.classList.add('hidden');
+  const modal = $('#winModal'); modal.classList.remove('hidden');
+  modal.firstElementChild.classList.remove('pop'); void modal.offsetWidth; modal.firstElementChild.classList.add('pop');
+  fanfare(); confettiBurst();
+  renderBanner(); renderResults(); updateSpinButton();
+  $('#wAutoNote').textContent = '';
+  if ($('#chkAuto').checked && done < prize.qty) {
+    let s = 4;
+    const tickNote = () => { $('#wAutoNote').textContent = `ໝູນຕໍ່ອັດຕະໂນມັດໃນ ${s} ວິນາທີ...`; };
+    tickNote();
+    autoTimer = setInterval(() => { s--; if (s <= 0) closeWinner(true); else tickNote(); }, 1000);
+  } else if (done >= prize.qty) {
+    $('#wAutoNote').textContent = `🎊 ລາງວັນ "${prize.name}" ຈັບຄົບ ${prize.qty} ລາງວັນແລ້ວ`;
+  }
+}
+
+function closeWinner(continueSpin) {
+  if (!pendingWinner) return;
+  clearInterval(autoTimer); autoTimer = null;
+  pendingWinner = null;
+  $('#winModal').classList.add('hidden');
+  refreshAll();
+  const p = currentPrize();
+  if (continueSpin && p && drawnCount(p.id) < p.qty) setTimeout(spin, 600);
+}
+$('#wOk').onclick = () => closeWinner($('#chkAuto').checked);
+$('#wAbsent').onclick = () => {
+  if (!pendingWinner) return;
+  pendingWinner.status = 'absent'; saveAdmin();
+  toast(`🚫 ${pendingWinner.name} ບໍ່ຢູ່ — ຈັບໃໝ່`);
+  closeWinner(true);
+};
+$('#btnSpin').onclick = spin;
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, select, textarea')) return;
+  if (e.code === 'Space' || e.code === 'Enter') {
+    e.preventDefault();
+    if (pendingWinner) closeWinner($('#chkAuto').checked);
+    else if (!$('#qrModal').classList.contains('hidden')) return;
+    else spin();
+  }
+  if (e.code === 'Escape') $('#qrModal').classList.add('hidden');
+});
+canvas.addEventListener('click', e => {
+  const r = canvas.getBoundingClientRect(), x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2;
+  if (Math.hypot(x, y) < r.width * 0.075) spin();
+});
+
+// ====================== confetti ======================
+const cf = $('#confetti'), cfx = cf.getContext('2d');
+let parts = [], cfRunning = false;
+function confettiBurst() {
+  cf.width = innerWidth; cf.height = innerHeight;
+  const cols = ['#FFD60A', '#FFFFFF', '#F5B700', '#1A1400', '#FFE047'];
+  for (let k = 0; k < 2; k++) for (let i = 0; i < 160; i++) {
+    parts.push({ x: k ? cf.width : 0, y: cf.height * 0.75, vx: (k ? -1 : 1) * (6 + Math.random() * 12), vy: -(10 + Math.random() * 16), s: 6 + Math.random() * 8, c: cols[i % cols.length], r: Math.random() * 6, vr: (Math.random() - .5) * .4, life: 0 });
+  }
+  if (!cfRunning) { cfRunning = true; requestAnimationFrame(cfStep); }
+}
+function cfStep() {
+  cfx.clearRect(0, 0, cf.width, cf.height);
+  parts = parts.filter(p => p.y < cf.height + 40 && p.life < 400);
+  for (const p of parts) {
+    p.vy += 0.35; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+    cfx.save(); cfx.translate(p.x, p.y); cfx.rotate(p.r); cfx.fillStyle = p.c;
+    cfx.strokeStyle = 'rgba(0,0,0,.15)'; cfx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); cfx.strokeRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+    cfx.restore();
+  }
+  if (parts.length) requestAnimationFrame(cfStep); else { cfRunning = false; cfx.clearRect(0, 0, cf.width, cf.height); }
+}
+
+// ====================== boot ======================
+setMuteIcon();
+(async () => {
+  await poll(true);
+  if (selectedPrizeId && !currentPrize()) selectPrize(null);
+  refreshAll();
+  loadInfo();
+  setInterval(() => { if (!spinning) poll(); }, 3000);
+})();
+</script>
+</body>
+</html>

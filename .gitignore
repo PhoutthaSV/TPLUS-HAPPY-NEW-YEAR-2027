@@ -1,0 +1,7 @@
+# Real staff list & event data (private)
+List.csv
+List.xlsx
+data/
+*.tmp
+node_modules/
+.claude/settings.local.json
