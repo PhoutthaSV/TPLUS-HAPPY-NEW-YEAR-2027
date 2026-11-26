@@ -40,6 +40,27 @@ tailwind.config = {
   .qr-url { font-size: min(1.8vh, 3vw); margin-top: 1vh; max-width: 90vw; opacity: .75; }
   .qr-count { font-size: min(3.4vh, 4.4vw); margin-top: 1.5vh; padding: .6vh 2.5vh; }
   #qrBig img, #qrBig canvas { display: block; }
+  /* Fullscreen results */
+  #resShow { background: radial-gradient(circle at 50% 40%, #FFFFFF 0%, #FFFBEA 55%, #FFE047 100%); }
+  .rs-head { height: 16vh; }
+  .rs-logo { width: 9vh; height: 9vh; }
+  .rs-pimg { width: 12vh; height: 12vh; font-size: 7vh; }
+  .rs-kicker { font-size: min(2.6vh, 2vw); }
+  .rs-title { font-size: min(7vh, 5vw); line-height: 1.15; }
+  .rs-count { font-size: min(7vh, 5vw); }
+  .rs-foot { height: 9vh; }
+  .rs-btn { width: 6vh; height: 6vh; font-size: 2.6vh; }
+  .rs-hint { font-size: 1.8vh; }
+  .rs-dot { height: 1.4vh; width: 1.4vh; border-radius: 999px; background: #FFD60A55; cursor: pointer; }
+  .rs-dot.on { width: 4vh; background: #FFD60A; }
+  .rs-card { display: flex; align-items: center; gap: 1.2em; background: #fff; border: .35vh solid #FFD60A; border-radius: 1.6vh;
+    box-shadow: 0 .6vh 1.6vh rgba(26,20,0,.12); padding: .45em 1em; min-width: 0; }
+  .rs-card .no { flex-shrink: 0; width: 1.9em; height: 1.9em; border-radius: 999px; background: #1A1400; color: #FFD60A;
+    display: grid; place-items: center; font-weight: 900; font-size: .85em; }
+  .rs-card .nm { font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rs-card .mt { font-weight: 600; opacity: .65; font-size: .5em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @keyframes rsIn { from { opacity: 0; transform: translateY(2vh) scale(.96) } to { opacity: 1; transform: none } }
+  .rs-card { animation: rsIn .45s cubic-bezier(.2,.9,.3,1.2) both; }
   /* Wheel-only fullscreen */
   /* .stage-full = fallback when the browser refuses the Fullscreen API (fills the window instead) */
   #stage:fullscreen, #stage.stage-full { border: 0; border-radius: 0; overflow: auto; display: flex; flex-direction: column;
@@ -171,6 +192,7 @@ tailwind.config = {
     <!-- Results -->
     <div data-panel="results" class="hidden flex-1 overflow-auto scroll-thin p-4 space-y-4">
       <div class="flex flex-wrap gap-2">
+        <button id="btnShowResults" class="w-full rounded-xl bg-brand text-brand-900 font-extrabold px-4 py-3 text-lg border-2 border-brand-900">🖥️ ສະແດງຜົນເຕັມຈໍ (ອ່ານຜົນ)</button>
         <button id="btnExport" class="rounded-xl bg-brand-900 text-brand font-bold px-4 py-2">⬇️ ສົ່ງອອກ CSV (Excel)</button>
         <button id="btnUndo" class="rounded-xl border-2 border-brand-900 font-bold px-4 py-2">↩️ ຍົກເລີກຄົນລ່າສຸດ</button>
         <button id="btnResetResults" class="rounded-xl border-2 border-red-500 text-red-600 font-bold px-4 py-2">🗑️ ລ້າງຜົນທັງໝົດ</button>
@@ -245,6 +267,30 @@ tailwind.config = {
     <p id="qrUrlText" class="qr-url font-bold break-all"></p>
     <p class="qr-count font-black rounded-full bg-brand-900 text-brand">ລົງທະບຽນແລ້ວ <span id="qrCount">0</span> ຄົນ</p>
   </div>
+</div>
+
+<!-- Fullscreen results (for announcing winners), one prize per page -->
+<div id="resShow" class="hidden fixed inset-0 z-40 flex flex-col text-brand-900 overflow-hidden">
+  <header class="rs-head flex items-center gap-[2vw] px-[3vw] bg-brand border-b-[0.6vh] border-brand-900">
+    <img src="/logo.png" class="rs-logo rounded-2xl shadow" alt="">
+    <div id="rsPrizeImg" class="rs-pimg rounded-2xl bg-white border-4 border-brand-900 overflow-hidden grid place-items-center shrink-0"></div>
+    <div class="flex-1 min-w-0">
+      <div class="rs-kicker font-bold opacity-75">🏆 ລາຍຊື່ຜູ້ໂຊກດີ · <span id="rsType"></span></div>
+      <div id="rsPrize" class="rs-title font-black truncate"></div>
+    </div>
+    <div class="text-center shrink-0">
+      <div id="rsCount" class="rs-count font-black leading-none"></div>
+      <div class="rs-kicker font-bold opacity-75">ລາງວັນ</div>
+    </div>
+    <button id="rsClose" class="rs-btn rounded-full bg-brand-900 text-brand font-black shrink-0" title="ປິດ (Esc)">✕</button>
+  </header>
+  <main id="rsGrid" class="flex-1 min-h-0 grid content-center gap-[1.6vh] px-[3vw] py-[2.5vh] overflow-auto"></main>
+  <footer class="rs-foot flex items-center justify-center gap-[2vw] bg-brand-900 text-brand font-bold">
+    <button id="rsPrev" class="rs-btn rounded-full bg-brand text-brand-900 font-black">◀</button>
+    <div id="rsDots" class="flex items-center gap-2 flex-wrap justify-center max-w-[60vw]"></div>
+    <button id="rsNext" class="rs-btn rounded-full bg-brand text-brand-900 font-black">▶</button>
+    <span class="rs-hint opacity-60 hidden md:inline">← → ປ່ຽນລາງວັນ · Esc ປິດ</span>
+  </footer>
 </div>
 
 <div id="toasts" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 space-y-2 w-[min(92vw,420px)]"></div>
@@ -353,6 +399,7 @@ function refreshAll() {
   $('#hdrAtt').textContent = attendees.length;
   $('#qrCount').textContent = attendees.length;
   renderBanner(); renderPrizes(); renderResults(); renderAttendees(); renderEmployees(); updateSpinButton();
+  if (resShowOpen()) renderResShow(false);
 }
 
 // ====================== prizes UI ======================
@@ -692,7 +739,7 @@ $('#btnFull').onclick = () => document.fullscreenElement ? document.exitFullscre
 // Wheel-only fullscreen. Popups (winner, QR, toasts, confetti) live inside the stage
 // so they still show while only the stage is fullscreen.
 const stage = $('#stage');
-['#winModal', '#qrModal', '#toasts', '#confetti'].forEach(s => stage.appendChild($(s)));
+['#winModal', '#qrModal', '#resShow', '#toasts', '#confetti'].forEach(s => stage.appendChild($(s)));
 function stageIsFull() { return document.fullscreenElement === stage || stage.classList.contains('stage-full'); }
 function syncStageBtn() { $('#btnStageFull').textContent = stageIsFull() ? '✕ ອອກຈາກເຕັມຈໍ (Esc)' : '⛶ ເຕັມຈໍວົງລໍ້'; }
 function exitStageFull() {
@@ -971,8 +1018,94 @@ $('#wAbsent').onclick = () => {
   closeWinner(true);
 };
 $('#btnSpin').onclick = spin;
+// ====================== fullscreen results ======================
+let rsPrizeId = null;
+const resShowEl = $('#resShow');
+const resShowOpen = () => !resShowEl.classList.contains('hidden');
+function rsPrizeIds() {
+  // prizes that have at least one winner, in prize-list order (plus results of deleted prizes)
+  const won = results.filter(r => r.status !== 'absent');
+  return [...new Set([...prizes.map(p => p.id), ...won.map(r => r.prizeId)])].filter(id => won.some(r => r.prizeId === id));
+}
+function openResShow() {
+  const ids = rsPrizeIds();
+  if (!ids.length) return toast('ຍັງບໍ່ມີຜູ້ໂຊກດີ', 'error');
+  rsPrizeId = ids.includes(selectedPrizeId) ? selectedPrizeId : ids[0];
+  resShowEl.classList.remove('hidden');
+  if (!document.fullscreenElement && resShowEl.requestFullscreen) resShowEl.requestFullscreen().catch(() => {});
+  renderResShow(true);
+}
+function closeResShow() {
+  resShowEl.classList.add('hidden');
+  if (document.fullscreenElement === resShowEl) document.exitFullscreen();
+}
+function stepResShow(dir) {
+  const ids = rsPrizeIds(); if (!ids.length) return;
+  const i = ids.indexOf(rsPrizeId);
+  rsPrizeId = ids[(i + dir + ids.length) % ids.length];
+  renderResShow(true);
+}
+let rsLastKey = '';
+function renderResShow(animate) {
+  const ids = rsPrizeIds();
+  if (!ids.length) return closeResShow();
+  if (!ids.includes(rsPrizeId)) rsPrizeId = ids[0];
+  const p = prizeById(rsPrizeId);
+  const list = results.filter(r => r.prizeId === rsPrizeId && r.status !== 'absent');
+  const key = rsPrizeId + '|' + list.map(r => r.id).join(',') + '|' + innerWidth + 'x' + innerHeight;
+  if (!animate && key === rsLastKey) return;
+  const prevCount = rsLastKey.startsWith(rsPrizeId + '|') ? rsLastKey.split('|')[1].split(',').filter(Boolean).length : 0;
+  rsLastKey = key;
+
+  $('#rsPrize').textContent = p?.name || list[0]?.prizeName || '';
+  $('#rsType').textContent = typeLabel(p?.type || list[0]?.round);
+  $('#rsCount').innerHTML = `${list.length}${p ? `<span style="font-size:.55em;opacity:.55">/${p.qty}</span>` : ''}`;
+  $('#rsPrizeImg').innerHTML = p?.image ? `<img src="${p.image}" class="w-full h-full object-contain">` : '🎁';
+  $('#rsDots').innerHTML = ids.map(id => `<span class="rs-dot ${id === rsPrizeId ? 'on' : ''}" data-id="${id}" title="${esc(prizeById(id)?.name || '')}"></span>`).join('');
+
+  // Layout: pick columns so all winners fit on one screen, then size the text to the row height
+  const n = list.length, grid = $('#rsGrid');
+  const cols = n <= 6 ? 1 : n <= 14 ? 2 : n <= 27 ? 3 : 4;
+  const rows = Math.ceil(n / cols);
+  const availH = innerHeight * 0.75 - innerHeight * 0.05 - (rows - 1) * innerHeight * 0.016;
+  const rowH = Math.min(availH / rows, innerHeight * 0.16);
+  const colW = cols === 1 ? innerWidth * 0.7 : (innerWidth * 0.94 - (cols - 1) * innerWidth * 0.015) / cols;
+  // width of the longest name at 1px font, so every name fits without "..."
+  measureCtx.font = '900 100px Poppins, "Noto Sans Lao", sans-serif';
+  const longest = Math.max(1, ...list.map(r => measureCtx.measureText(r.name).width / 100));
+  const font = Math.max(14, Math.min(rowH * 0.42, (colW - 24) / (longest + 5.4), 80));
+  grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  grid.style.columnGap = '1.5vw';
+  grid.style.fontSize = font + 'px';
+  grid.style.maxWidth = cols === 1 ? '70vw' : '';
+  grid.style.margin = cols === 1 ? '0 auto' : '';
+  grid.style.width = '100%';
+  grid.innerHTML = list.map((r, i) => `
+    <div class="rs-card" style="min-height:${rowH}px;${animate || i >= prevCount ? `animation-delay:${animate ? Math.min(i * 0.07, 1.4) : 0}s` : 'animation:none'}">
+      <span class="no">${i + 1}</span>
+      <div class="min-w-0 flex-1">
+        <div class="nm">${esc(r.name)}</div>
+        <div class="mt">${esc([r.staffId, r.department, r.location].filter(Boolean).join(' · '))}</div>
+      </div>
+    </div>`).join('');
+}
+$('#btnShowResults').onclick = openResShow;
+$('#rsClose').onclick = closeResShow;
+$('#rsPrev').onclick = () => stepResShow(-1);
+$('#rsNext').onclick = () => stepResShow(1);
+$('#rsDots').onclick = e => { const d = e.target.closest('[data-id]'); if (d) { rsPrizeId = d.dataset.id; renderResShow(true); } };
+document.addEventListener('fullscreenchange', () => { if (resShowOpen() && document.fullscreenElement !== resShowEl && !document.fullscreenElement) { /* user pressed Esc in browser fullscreen */ closeResShow(); } });
+addEventListener('resize', () => { if (resShowOpen()) renderResShow(false); });
+
 document.addEventListener('keydown', e => {
-  if (e.target.matches('input, select, textarea')) return;
+  if (e.target.matches?.('input, select, textarea')) return;
+  if (resShowOpen()) {
+    if (e.code === 'ArrowRight' || e.code === 'PageDown') stepResShow(1);
+    else if (e.code === 'ArrowLeft' || e.code === 'PageUp') stepResShow(-1);
+    else if (e.code === 'Escape') closeResShow();
+    if (e.code === 'Space' || e.code === 'Enter') e.preventDefault();
+    return;
+  }
   if (e.code === 'Space' || e.code === 'Enter') {
     e.preventDefault();
     if (pendingWinner) closeWinner($('#chkAuto').checked);
