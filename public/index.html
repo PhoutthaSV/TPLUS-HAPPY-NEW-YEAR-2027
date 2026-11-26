@@ -38,7 +38,7 @@ tailwind.config = {
   .qr-title { font-size: min(11vh, 6.2vw); margin-top: 3vh; }
   .qr-sub { font-size: min(5.2vh, 2.9vw); margin-top: 2.5vh; }
   .qr-count { font-size: min(4.4vh, 2.5vw); margin-top: 4vh; padding: 1vh 2.2vw; }
-  .qr-box { padding: min(3vh, 2vw); }
+  .qr-box { padding: 1.5rem; }
   .qr-url { font-size: min(2.4vh, 1.4vw); margin-top: 1.5vh; max-width: 45vw; opacity: .75; }
   #qrBig img, #qrBig canvas { display: block; }
   @media (orientation: portrait) {
@@ -47,7 +47,6 @@ tailwind.config = {
     .qr-title { font-size: min(6.5vh, 11vw); margin-top: 1.5vh; }
     .qr-sub { font-size: min(3.2vh, 5.5vw); margin-top: 1vh; }
     .qr-count { font-size: min(3vh, 5vw); margin-top: 1.5vh; padding: .8vh 5vw; }
-    .qr-box { padding: 2.5vw; }
     .qr-url { font-size: min(1.8vh, 3.2vw); max-width: 90vw; }
   }
   /* Wheel-only fullscreen */
@@ -573,8 +572,7 @@ function renderQR() {
   $('#qrSmall').innerHTML = ''; $('#qrBig').innerHTML = '';
   if (window.QRCode) {
     qrSmallObj = new QRCode($('#qrSmall'), { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
-    const portrait = innerHeight > innerWidth;
-    const big = Math.floor(portrait ? Math.min(innerHeight * 0.42, innerWidth * 0.8) : Math.min(innerHeight * 0.72, innerWidth * 0.42));
+    const big = Math.floor(Math.min(innerHeight * 0.5, innerWidth * 0.8, 520)); // original QR size
     qrBigObj = new QRCode($('#qrBig'), { text: url, width: big, height: big, correctLevel: QRCode.CorrectLevel.M });
   } else $('#qrSmall').textContent = 'QR library ໂຫຼດບໍ່ໄດ້ (ຕ້ອງມີອິນເຕີເນັດ)';
   $('#qrUrlText').textContent = url;
